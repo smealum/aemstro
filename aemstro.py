@@ -41,7 +41,7 @@ def getOutputSymbol(v):
 	return getValue(v, output)
 
 def getLabelSymbol(v, t):
-	return t[v] if v in t else hex(v)
+	return t[v][1] if v in t else hex(v)
 
 def initIndent():
 	global numIdent
@@ -114,7 +114,18 @@ def parseCode(data, e, lt, vt, d):
 			iprint(lt[k][1]+":")
 
 		iprint("%08x [%08x]	"%(k,v), True)
-		if opcode==0x02:
+		if opcode==0x01:
+			inst=parseInstFormat1(v)
+			ext=e[inst["extid"]][0]
+			extd=parseExt(ext)
+			iprint("DP3    "+
+			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
+			       "   <-	"+
+			       getInputSymbol(inst["src1"], rvt)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       "   .   "+
+			       getInputSymbol(inst["src2"], rvt)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
+		elif opcode==0x02:
 			inst=parseInstFormat1(v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
@@ -139,12 +150,23 @@ def parseCode(data, e, lt, vt, d):
 			addr=inst["addr"]
 			if not (inst['flags'] & (1<<25)):
 				addr=addr+k # relative, TODO: sign extension(?)
-			iprint("CALL   "+getLabelSymbol(inst["addr"], lt)[1]+
+			iprint("CALL   "+getLabelSymbol(inst["addr"], lt)+
 			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 		elif opcode==0x22:
 			iprint("FLUSH")
 		elif opcode==0x21:
 			iprint("END")
+		# elif opcode==0x2D:
+		# 	inst=parseInstFormat1(v)
+		# 	ext=e[inst["extid"]][0]
+		# 	extd=parseExt(ext)
+		# 	iprint("SUB?   "+
+		# 	       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
+		# 	       "   <-	"+
+		# 	       getInputSymbol(inst["src1"], rvt)+"."+(parseComponentSwizzle(extd["src1"]))+
+		# 	       "   .   "+
+		# 	       getInputSymbol(inst["src2"], rvt)+"."+(parseComponentSwizzle(extd["src2"]))+
+		# 	       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		else:
 			inst=parseInstFormat1(v)
 			ext=e[inst["extid"]][0]
