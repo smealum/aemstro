@@ -3,9 +3,9 @@ import os
 import sys
  
 input={}
-'''0x0 : "vertex.position",
-0x1 : "vertex.texcoord",
-0x4 : "vertex.color?"}'''
+# '''0x0 : "vertex.position",
+# 0x1 : "vertex.texcoord",
+# 0x4 : "vertex.color?"}'''
  
 output={0x0 : "glPosition",
 		0x2 : "glTexcoord",
@@ -29,7 +29,7 @@ def parseExtTable(data):
 	return out
 
 def getValue(v, t):
-	return t[v] if v in t else ("r%d"%(v))
+	return t[v] if v in t else ("r%02X"%(v))
 
 def getInputSymbol(v, vt):
 	if v in vt:
