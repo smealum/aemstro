@@ -8,12 +8,21 @@ input={}
 # 0x4 : "vertex.color?"}'''
  
 output={0x0 : "glPosition",
-		0x2 : "glTexcoord",
+		0x2 : "glColor",
+		0x4 : "glTexcoord",
 		0x6 : "glColor?",
 		0x8 : "glTexcoord?"}
  
 def getWord(b, k, n=4):
 	return sum(list(map(lambda c: b[k+c]<<(c*8),range(n))))
+
+def convFloat24(val):
+	tmp=((val>>16)&0xFF)+0x40
+	out=(tmp<<23)|((val&0x800000)<<31)|((val&0xFFFF)<<7)
+	try:
+		return (struct.unpack("f",struct.pack("I",out)))
+	except:
+		return hex(val)
 
 def parseSymbol(b,o):
 	len=0
@@ -144,7 +153,7 @@ def parseCode(data, e, lt, vt, d):
 			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
 			       "   <-	"+
 			       getInputSymbol(inst["src1"], rvt)+"."+(parseComponentSwizzle(extd["src1"]))+
-				" ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
+				" ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+", src2: "+hex(inst["src2"])+")")
 		elif opcode==0x24 or opcode==0x25 or opcode==0x26 or opcode==0x27:
 			inst=parseInstFormat2(v)
 			addr=inst["addr"]
@@ -238,7 +247,7 @@ def parseUnk1Table(data, sym):
 	indentOut()
 	out={}
 	for i in range(0,l,0x14):
-		iprint(str([hex(getWord(data,i+k)) for k in range(0,0x14,4)]))
+		iprint(hex(getWord(data,i))+" "+str([convFloat24(getWord(data,i+k)) for k in range(4,0x14,4)]))
 
 	unindentOut()
 	print("")
