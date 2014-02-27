@@ -46,7 +46,7 @@ def getInputSymbol(v, vt, ut):
 	if v in vt:
 		return vt[v]
 	elif v in ut:
-		return "("+",".join([str(k) for k in ut[v]])+")"
+		return "("+",".join(["%.2f"%k for k in ut[v]])+")"
 	else:
 		return getValue(v, input)
 
@@ -129,7 +129,18 @@ def parseCode(data, e, lt, vt, ut, d):
 			iprint(lt[k][1]+":")
 
 		iprint("%08x [%08x]	"%(k,v), True)
-		if opcode==0x01:
+		if opcode==0x00: #could be SUB ?
+			inst=parseInstFormat1(v)
+			ext=e[inst["extid"]][0]
+			extd=parseExt(ext)
+			iprint("ADD?   "+
+			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
+			       "   <-	"+
+			       getInputSymbol(inst["src1"], rvt, rut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       "   .   "+
+			       getInputSymbol(inst["src2"], rvt, rut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
+		elif opcode==0x01:
 			inst=parseInstFormat1(v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
@@ -171,6 +182,17 @@ def parseCode(data, e, lt, vt, ut, d):
 			iprint("FLUSH")
 		elif opcode==0x21:
 			iprint("END")
+		elif opcode==0x2A:
+			inst=parseInstFormat1(v)
+			ext=e[inst["extid"]][0]
+			extd=parseExt(ext)
+			iprint("EMITV? "+
+			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
+			       "   <-	"+
+			       getInputSymbol(inst["src1"], rvt, rut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       "   .   "+
+			       getInputSymbol(inst["src2"], rvt, rut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		# elif opcode==0x2D:
 		# 	inst=parseInstFormat1(v)
 		# 	ext=e[inst["extid"]][0]
