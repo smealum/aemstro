@@ -166,6 +166,17 @@ def parseCode(data, e, lt, vt, ut):
 			       "   .   "+
 			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
+		elif opcode==0x08:
+			inst=parseInstFormat1(v)
+			ext=e[inst["extid"]][0]
+			extd=parseExt(ext)
+			iprint("MUL?   "+
+			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
+			       "   <-	"+
+			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       "   .   "+
+			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		elif opcode==0x13:
 			inst=parseInstFormat1(v)
 			ext=e[inst["extid"]][0]
@@ -175,11 +186,23 @@ def parseCode(data, e, lt, vt, ut):
 			       "   <-	"+
 			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
 				" ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+", src2: "+hex(inst["src2"])+")")
+		elif opcode==0x21:
+			iprint("END")
+		elif opcode==0x22:
+			iprint("FLUSH")
+		elif opcode==0x2e:
+			inst=parseInstFormat1(v)
+			ext=e[inst["extid"]][0]
+			extd=parseExt(ext)
+			iprint("CMP?   "+
+			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
+			       "   <-	"+
+			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+				" ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+", src2: "+hex(inst["src2"])+")")
 		elif opcode==0x24 or opcode==0x25 or opcode==0x26 or opcode==0x27:
 			inst=parseInstFormat2(v)
 			addr=inst["addr"]
 			nmem = "JUMP" if (inst["flags"] & 0x20) else "CALL"
-			
 			iprint(nmem+"	"+getLabelSymbol(inst["addr"], lt)+
 			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 		elif opcode==0x28:
@@ -187,11 +210,6 @@ def parseCode(data, e, lt, vt, ut):
 			addr=inst["addr"]
 			iprint("IF?    "+getLabelSymbol(inst["addr"], lt)+
 			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
-
-		elif opcode==0x22:
-			iprint("FLUSH")
-		elif opcode==0x21:
-			iprint("END")
 		elif opcode==0x2A:
 			inst=parseInstFormat1(v)
 			ext=e[inst["extid"]][0]
