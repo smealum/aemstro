@@ -28,14 +28,14 @@ def convFloat24(f):
 
 # # doesn't quite work, but could be a more accurate approach ?
 # def convFloat24(val):
-# 	if val==0x0:
-# 		return 0.0
-# 	tmp=((val>>16)&0xFF)+0x40
-# 	out=(tmp<<23)|((val&0x800000)<<31)|((val&0xFFFF)<<7)
-# 	try:
-# 		return (struct.unpack("f",struct.pack("I",out)))[0]
-# 	except:
-# 		return (val)
+#	if val==0x0:
+#		return 0.0
+#	tmp=((val>>16)&0xFF)+0x40
+#	out=(tmp<<23)|((val&0x800000)<<31)|((val&0xFFFF)<<7)
+#	try:
+#		return (struct.unpack("f",struct.pack("I",out)))[0]
+#	except:
+#		return (val)
 
 def parseSymbol(b,o):
 	len=0
@@ -178,7 +178,9 @@ def parseCode(data, e, lt, vt, ut):
 		elif opcode==0x24 or opcode==0x25 or opcode==0x26 or opcode==0x27:
 			inst=parseInstFormat2(v)
 			addr=inst["addr"]
-			iprint("CALL   "+getLabelSymbol(inst["addr"], lt)+
+			nmem = "JUMP" if (inst["flags"] & 0x20) else "CALL"
+			
+			iprint(nmem+"	"+getLabelSymbol(inst["addr"], lt)+
 			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 		elif opcode==0x28:
 			inst=parseInstFormat2(v)
@@ -202,27 +204,31 @@ def parseCode(data, e, lt, vt, ut):
 			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		# elif opcode==0x2D:
-		# 	inst=parseInstFormat1(v)
-		# 	ext=e[inst["extid"]][0]
-		# 	extd=parseExt(ext)
-		# 	iprint("SUB?   "+
-		# 	       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
-		# 	       "   <-	"+
-		# 	       getInputSymbol(i, utnst["src1"], vt)+"."+(parseComponentSwizzle(extd["src1"]))+
-		# 	       "   .   "+
-		# 	       getInputSymbol(i, utnst["src2"], vt)+"."+(parseComponentSwizzle(extd["src2"]))+
-		# 	       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
+		#	inst=parseInstFormat1(v)
+		#	ext=e[inst["extid"]][0]
+		#	extd=parseExt(ext)
+		#	iprint("SUB?   "+
+		#	       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
+		#	       "   <-	"+
+		#	       getInputSymbol(i, utnst["src1"], vt)+"."+(parseComponentSwizzle(extd["src1"]))+
+		#	       "   .   "+
+		#	       getInputSymbol(i, utnst["src2"], vt)+"."+(parseComponentSwizzle(extd["src2"]))+
+		#	       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		else:
 			inst=parseInstFormat1(v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			iprint("???    "+
-			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   .   "+
-			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
+			if inst["extid"] in e:
+				ext=e[inst["extid"]][0]
+				extd=parseExt(ext)
+				iprint("???    "+
+				       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
+				       "   <-	"+
+				       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+				       "   .   "+
+				       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
+				       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
+			else:
+				iprint("???    invalid extension id");
+
 		k+=0x4
 
 def parseDVLP(data, lt, vt, ut):
