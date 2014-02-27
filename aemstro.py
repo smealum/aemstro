@@ -178,7 +178,7 @@ def parseCode(data, e, lt, vt, ut):
 		elif opcode==0x24 or opcode==0x25 or opcode==0x26 or opcode==0x27:
 			inst=parseInstFormat2(v)
 			addr=inst["addr"]
-			if not (inst['flags'] & (1<<25)):
+			iprint("CALL   "+getLabelSymbol(inst["addr"], lt)+
 			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 		elif opcode==0x28:
 			inst=parseInstFormat2(v)
