@@ -7,11 +7,12 @@ input={}
 # 0x1 : "vertex.texcoord",
 # 0x4 : "vertex.color?"}'''
  
-output={0x0 : "glPosition",
-		0x2 : "glColor",
-		0x4 : "glTexcoord",
-		0x6 : "glColor?",
-		0x8 : "glTexcoord?"}
+output={}
+# {0x0 : "glPosition",
+# 0x2 : "glTexcoord",
+# 0x4 : "glTexcoord",
+# 0x6 : "glColor?",
+# 0x8 : "glTexcoord?"}
  
 def getWord(b, k, n=4):
 	return sum(list(map(lambda c: b[k+c]<<(c*8),range(n))))
@@ -285,7 +286,7 @@ def transformRegisterValue(v):
 
 def parseVarTable(data, sym):
 	l=len(data)
-	iprint("Vars:")
+	iprint("Variables :")
 	indentOut()
 	out={}
 	for i in range(0,l,0x8):
@@ -302,7 +303,7 @@ def parseVarTable(data, sym):
 				name=parseSymbol(sym,off)+"["+str(k)+"]"
 				loc=base+k
 				out[loc]=name
-				iprint(parseSymbol(sym,off)+"["+str(k)+"]"+" r%d" % loc)
+				iprint("r%02X = " % loc + parseSymbol(sym,off)+"["+str(k)+"]")
 
 	unindentOut()
 	print("")
@@ -316,16 +317,20 @@ def parseUniformTable(data, sym):
 	for i in range(0,l,0x14):
 		r=transformRegisterValue(getWord(data,i+2,2))
 		vec=[convFloat24(getWord(data,i+k)) for k in range(4,0x14,4)]
-		iprint("r%02X"%(r)+" "+str(vec))
+		iprint("r%02X = "%(r)+str(vec))
 		out[r]=vec
 
 	unindentOut()
 	print("")
 	return out
 
-def parseUnk2Table(data, sym):
+outputTypes={0x0 : "position",
+			0x2 : "color",
+			0x3 : "texcoord"}
+
+def parseOutputTable(data, sym):
 	l=len(data)
-	iprint("unk2 :")
+	iprint("Output :")
 	indentOut()
 	out={}
 	for i in range(0,l,0x8):
@@ -333,7 +338,7 @@ def parseUnk2Table(data, sym):
 		v1=getWord(data,i,2)
 		v2=getWord(data,i+2,2)
 
-		iprint(hex(off)+" : "+hex(v1)+", "+hex(v2))
+		iprint(hex(off)+" : r"+"%02X"%(v2*2)+" = "+(outputTypes[v1] if v1 in outputTypes else hex(v1)))
 
 	unindentOut()
 	print("")
@@ -361,8 +366,8 @@ def parseDVLE(data,dvlp, k):
 	labelOffset=getWord(data, 0x20)
 	labelSize=getWord(data, 0x24)*0x10
 
-	unk2Offset=getWord(data, 0x28)
-	unk2Size=getWord(data, 0x2C)*0x8
+	outputOffset=getWord(data, 0x28)
+	outputSize=getWord(data, 0x2C)*0x8
 
 	varOffset=getWord(data, 0x30)
 	varSize=getWord(data, 0x34)*0x8
@@ -374,7 +379,7 @@ def parseDVLE(data,dvlp, k):
 	labelTable=parseLabelTable(data[labelOffset:(labelOffset+labelSize)],sym)
 	varTable=parseVarTable(data[varOffset:(varOffset+varSize)],sym)
 	unifTable=parseUniformTable(data[unifOffset:(unifOffset+unifSize)],sym)
-	unk2Table=parseUnk2Table(data[unk2Offset:(unk2Offset+unk2Size)],sym)
+	outputTable=parseOutputTable(data[outputOffset:(outputOffset+outputSize)],sym)
 
 	parseDVLP(dvlp, labelTable, varTable, unifTable)
 	print("")
