@@ -179,9 +179,13 @@ def parseCode(data, e, lt, vt, ut):
 			inst=parseInstFormat2(v)
 			addr=inst["addr"]
 			if not (inst['flags'] & (1<<25)):
-				addr=addr+k # relative, TODO: sign extension(?)
-			iprint("CALL   "+getLabelSymbol(inst["addr"], lt)+
 			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
+		elif opcode==0x28:
+			inst=parseInstFormat2(v)
+			addr=inst["addr"]
+			iprint("IF?    "+getLabelSymbol(inst["addr"], lt)+
+			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
+
 		elif opcode==0x22:
 			iprint("FLUSH")
 		elif opcode==0x21:
