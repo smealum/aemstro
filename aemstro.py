@@ -16,15 +16,26 @@ output={0x0 : "glPosition",
 def getWord(b, k, n=4):
 	return sum(list(map(lambda c: b[k+c]<<(c*8),range(n))))
 
-def convFloat24(val):
-	if val==0x0:
+def convFloat24(f):
+	#seee eeee mmmm mmmm mmmm mmmm
+	if f==0x0:
 		return 0.0
-	tmp=((val>>16)&0xFF)+0x40
-	out=(tmp<<23)|((val&0x800000)<<31)|((val&0xFFFF)<<7)
-	try:
-		return (struct.unpack("f",struct.pack("I",out)))[0]
-	except:
-		return (val)
+	s=f>>23
+	e=(f>>16)&0x7F
+	m=f&0xffff
+	x=pow(2.0,e-63)*(1 + m*pow(2.0,-16))
+	return x
+
+# # doesn't quite work, but could be a more accurate approach ?
+# def convFloat24(val):
+# 	if val==0x0:
+# 		return 0.0
+# 	tmp=((val>>16)&0xFF)+0x40
+# 	out=(tmp<<23)|((val&0x800000)<<31)|((val&0xFFFF)<<7)
+# 	try:
+# 		return (struct.unpack("f",struct.pack("I",out)))[0]
+# 	except:
+# 		return (val)
 
 def parseSymbol(b,o):
 	len=0
@@ -306,8 +317,8 @@ def parseDVLE(data,dvlp, k):
 	iprint("DVLE "+str(k))
 
 	shaderType=getWord(data, 0x6, 1)
-	mainStart=getWord(data, 0x8)
-	mainEnd=getWord(data, 0xC)
+	mainStart=getWord(data, 0x8)*4
+	mainEnd=getWord(data, 0xC)*4
 
 	iprint("vertex shader" if shaderType==0x0 else "geometry shader")
 	iprint("main : "+hex(mainStart)+"-"+hex(mainEnd))
