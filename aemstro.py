@@ -111,18 +111,11 @@ def parseInstFormat2(v):
 			"flags": (v>>22)&0x3F,
 			"ret" : (v)&0x3FF}
 
-def parseCode(data, e, lt, vt, ut, d):
+def parseCode(data, e, lt, vt, ut):
 	l=len(data)
 	for k in range(0,l,4):
 		v=getWord(data,k)
 		opcode=v>>26
-
-		if k in d:
-			rvt=vt[d[k]]
-			rut=ut[d[k]]
-		else:
-			rvt={}
-			rut={}
 
 		if k in lt:
 			iprint("%08x [--------] "%(k), True)
@@ -136,9 +129,9 @@ def parseCode(data, e, lt, vt, ut, d):
 			iprint("ADD?   "+
 			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
 			       "   <-	"+
-			       getInputSymbol(inst["src1"], rvt, rut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   .   "+
-			       getInputSymbol(inst["src2"], rvt, rut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       "   +   "+
+			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		elif opcode==0x01:
 			inst=parseInstFormat1(v)
@@ -147,9 +140,9 @@ def parseCode(data, e, lt, vt, ut, d):
 			iprint("DP3    "+
 			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
 			       "   <-	"+
-			       getInputSymbol(inst["src1"], rvt, rut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
 			       "   .   "+
-			       getInputSymbol(inst["src2"], rvt, rut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		elif opcode==0x02:
 			inst=parseInstFormat1(v)
@@ -158,9 +151,9 @@ def parseCode(data, e, lt, vt, ut, d):
 			iprint("DP4    "+
 			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
 			       "   <-	"+
-			       getInputSymbol(inst["src1"], rvt, rut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
 			       "   .   "+
-			       getInputSymbol(inst["src2"], rvt, rut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		elif opcode==0x13:
 			inst=parseInstFormat1(v)
@@ -169,7 +162,7 @@ def parseCode(data, e, lt, vt, ut, d):
 			iprint("MOV    "+
 			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
 			       "   <-	"+
-			       getInputSymbol(inst["src1"], rvt, rut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
 				" ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+", src2: "+hex(inst["src2"])+")")
 		elif opcode==0x24 or opcode==0x25 or opcode==0x26 or opcode==0x27:
 			inst=parseInstFormat2(v)
@@ -189,9 +182,9 @@ def parseCode(data, e, lt, vt, ut, d):
 			iprint("EMITV? "+
 			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
 			       "   <-	"+
-			       getInputSymbol(inst["src1"], rvt, rut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
 			       "   .   "+
-			       getInputSymbol(inst["src2"], rvt, rut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		# elif opcode==0x2D:
 		# 	inst=parseInstFormat1(v)
@@ -200,9 +193,9 @@ def parseCode(data, e, lt, vt, ut, d):
 		# 	iprint("SUB?   "+
 		# 	       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
 		# 	       "   <-	"+
-		# 	       getInputSymbol(i, rutnst["src1"], rvt)+"."+(parseComponentSwizzle(extd["src1"]))+
+		# 	       getInputSymbol(i, utnst["src1"], vt)+"."+(parseComponentSwizzle(extd["src1"]))+
 		# 	       "   .   "+
-		# 	       getInputSymbol(i, rutnst["src2"], rvt)+"."+(parseComponentSwizzle(extd["src2"]))+
+		# 	       getInputSymbol(i, utnst["src2"], vt)+"."+(parseComponentSwizzle(extd["src2"]))+
 		# 	       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		else:
 			inst=parseInstFormat1(v)
@@ -211,20 +204,20 @@ def parseCode(data, e, lt, vt, ut, d):
 			iprint("???    "+
 			       getOutputSymbol(inst["dst"])+"."+extd["dstcomp"]+
 			       "   <-	"+
-			       getInputSymbol(inst["src1"], rvt, rut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
 			       "   .   "+
-			       getInputSymbol(inst["src2"], rvt, rut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		k+=0x4
 
-def parseDVLP(data, lt, vt, ut, d):
+def parseDVLP(data, lt, vt, ut):
 	l=len(data)
 	extOffset=getWord(data, 0x10)
 	extSize=getWord(data, 0x14)*8
 	ext=parseExtTable(data[extOffset:(extOffset+extSize)])
 	codeOffset=getWord(data, 0x8)
 	codeSize=getWord(data, 0xC)*4
-	parseCode(data[codeOffset:(codeOffset+codeSize)], ext, lt, vt, ut, d)
+	parseCode(data[codeOffset:(codeOffset+codeSize)], ext, lt, vt, ut)
 
 def parseLabelTable(data, sym):
 	l=len(data)
@@ -307,8 +300,18 @@ def parseUnk2Table(data, sym):
 	print("")
 	return out
 
-def parseDVLE(data):
+def parseDVLE(data,dvlp, k):
 	l=len(data)
+
+	iprint("DVLE "+str(k))
+
+	shaderType=getWord(data, 0x6, 1)
+	mainStart=getWord(data, 0x8)
+	mainEnd=getWord(data, 0xC)
+
+	iprint("vertex shader" if shaderType==0x0 else "geometry shader")
+	iprint("main : "+hex(mainStart)+"-"+hex(mainEnd))
+	print("")
 
 	codeStartOffset=getWord(data, 0x8)
 	codeEndOffset=getWord(data, 0xC)
@@ -334,6 +337,9 @@ def parseDVLE(data):
 	unifTable=parseUniformTable(data[unifOffset:(unifOffset+unifSize)],sym)
 	unk2Table=parseUnk2Table(data[unk2Offset:(unk2Offset+unk2Size)],sym)
 
+	parseDVLP(dvlp, labelTable, varTable, unifTable)
+	print("")
+
 	return (labelTable,varTable,unifTable,range(codeStartOffset,codeEndOffset))
 
 def parseDVLB(data):
@@ -343,15 +349,16 @@ def parseDVLB(data):
 	labelTable={}
 	varTable={}
 	unifTable={}
+	dvlp=data[(0x8+0x4*n):l]
 	for i in range(n):
 		offset=getWord(data, 0x8+0x4*i)
-		r=parseDVLE(data[offset:l])
-		for k in r[3]:
-			dvleTable[k*4]=i
-		labelTable.update(r[0])
-		varTable[i]=r[1]
-		unifTable[i]=r[2]
-	parseDVLP(data[(0x8+0x4*n):l],labelTable,varTable,unifTable,dvleTable)
+		r=parseDVLE(data[offset:l],dvlp,i)
+		# for k in r[3]:
+		# 	dvleTable[k*4]=i
+		# labelTable.update(r[0])
+		# varTable[i]=r[1]
+		# unifTable[i]=r[2]
+	# parseDVLP(dvlp,labelTable,varTable,unifTable,dvleTable)
  
 initIndent()
 src1fn=sys.argv[1]
