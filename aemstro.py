@@ -246,7 +246,7 @@ def parseCode(data, e, lt, vt, ut, ot):
 				       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 				       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 			else:
-				iprint("???    invalid extension id");
+				iprint("???    invalid extension id")
 
 		k+=0x4
 
