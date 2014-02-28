@@ -326,7 +326,9 @@ def parseUniformTable(data, sym):
 
 outputTypes={0x0 : "result.position",
 			0x2 : "result.color",
-			0x3 : "result.texcoord"}
+			0x3 : "result.texcoord0",
+			0x5 : "result.texcoord1",
+			0x6 : "result.texcoord2"}
 
 def parseOutputTable(data, sym):
 	l=len(data)
