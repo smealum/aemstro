@@ -171,7 +171,7 @@ def parseCode(data, e, lt, vt, ut, ot):
 			inst=parseInstFormat1(v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
-			iprint("MUL?   "+
+			iprint("MUL    "+
 			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
 			       "   <-	"+
 			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
