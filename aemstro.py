@@ -178,6 +178,28 @@ def parseCode(data, e, lt, vt, ut, ot):
 			       "   .   "+
 			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
+		elif opcode==0x09 or opcode==0x0A:
+			inst=parseInstFormat1(v)
+			ext=e[inst["extid"]][0]
+			extd=parseExt(ext)
+			iprint("CLAMP? "+
+			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
+			       "   <-	"+
+			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       "   .   "+
+			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
+		elif opcode==0x0B:
+			inst=parseInstFormat1(v)
+			ext=e[inst["extid"]][0]
+			extd=parseExt(ext)
+			iprint("DIV?   "+
+			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
+			       "   <-	"+
+			       getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       "   .   "+
+			       getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       " ("+hex(inst["extid"])+", "+"flags: "+bin(inst["flags"])+")")
 		elif opcode==0x13:
 			inst=parseInstFormat1(v)
 			ext=e[inst["extid"]][0]
