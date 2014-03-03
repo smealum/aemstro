@@ -138,10 +138,11 @@ def parseInstFormat3(v):
 			"src1"   : (v>>7)&0x7F,
 			"dst"    : (v>>14)&0x7F}
 
+
 def printInstFormat1(n, inst, e, lt, vt, ut, ot):
 	ext=e[inst["extid"]][0]
 	extd=parseExt(ext)
-	iprint(n + "   " +
+	iprint(n + " "*(7-len(n)) +
 			getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
 			"   <-	"+
 			getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
@@ -150,8 +151,8 @@ def printInstFormat1(n, inst, e, lt, vt, ut, ot):
 			" ("+hex(inst["extid"])+")")
 
 def printInstFormat2(n, inst, e, lt, vt, ut, ot):
-	iprint(n + "   " +
-			"   "+getLabelSymbol(inst["addr"], lt)+
+	iprint(n + " "*(7-len(n)) +
+			getLabelSymbol(inst["addr"], lt)+
 			" ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 
 instList={}
@@ -233,7 +234,7 @@ def parseCode(data, e, lt, vt, ut, ot):
 			       " ("+hex(inst["extid"])+")")
 		else:
 			inst=parseInstFormat1(v)
-			if inst["extid"] in e:
+			if inst["extid"] < len(e):
 				ext=e[inst["extid"]][0]
 				extd=parseExt(ext)
 				iprint("???    "+
@@ -311,7 +312,7 @@ def parseVarTable(data, sym):
 	print("")
 	return (src1,src2)
 
-def parseUniformTable(data, sym):
+def parseConstTable(data, sym):
 	l=len(data)
 	iprint("Constants :")
 	indentOut()
@@ -387,7 +388,7 @@ def parseDVLE(data,dvlp, k):
 	sym=data[symbolOffset:(symbolOffset+symbolSize)]
 	labelTable=parseLabelTable(data[labelOffset:(labelOffset+labelSize)],sym)
 	varTable=parseVarTable(data[varOffset:(varOffset+varSize)],sym)
-	unifTable=parseUniformTable(data[unifOffset:(unifOffset+unifSize)],sym)
+	unifTable=parseConstTable(data[unifOffset:(unifOffset+unifSize)],sym)
 	outputTable=parseOutputTable(data[outputOffset:(outputOffset+outputSize)],sym)
 
 	parseDVLP(dvlp, labelTable, varTable, unifTable, outputTable)
