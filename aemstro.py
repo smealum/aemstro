@@ -138,6 +138,37 @@ def parseInstFormat3(v):
 			"src1"   : (v>>7)&0x7F,
 			"dst"    : (v>>14)&0x7F}
 
+def printInstFormat1(n, inst, e, lt, vt, ut, ot):
+	ext=e[inst["extid"]][0]
+	extd=parseExt(ext)
+	iprint(n + "   " +
+			getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
+			"   <-	"+
+			getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			",      "+
+			getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			" ("+hex(inst["extid"])+")")
+
+def printInstFormat2(n, inst, e, lt, vt, ut, ot):
+	iprint(n + "   " +
+			"   "+getLabelSymbol(inst["addr"], lt)+
+			" ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
+
+instList={}
+fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2)]
+
+instList[0x00]={"name" : "ADD", "format" : 0}
+instList[0x01]={"name" : "DP3", "format" : 0}
+instList[0x02]={"name" : "DP4", "format" : 0}
+instList[0x08]={"name" : "MUL", "format" : 0}
+instList[0x09]={"name" : "MAX", "format" : 0}
+instList[0x0A]={"name" : "MIN", "format" : 0}
+instList[0x13]={"name" : "MOV", "format" : 0}
+instList[0x24]={"name" : "CALL", "format" : 1}
+instList[0x25]={"name" : "CALL", "format" : 1}
+instList[0x26]={"name" : "JUMP", "format" : 1}
+instList[0x27]={"name" : "JUMP", "format" : 1}
+
 def parseCode(data, e, lt, vt, ut, ot):
 	l=len(data)
 	for k in range(0,l,4):
@@ -149,92 +180,11 @@ def parseCode(data, e, lt, vt, ut, ot):
 			iprint(lt[k][1]+":")
 
 		iprint("%08x [%08x]	"%(k,v), True)
-		if opcode==0x00:
-			inst=parseInstFormat1(v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			iprint("ADD    "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   +   "+
-			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			       " ("+hex(inst["extid"])+")")
-		elif opcode==0x01:
-			inst=parseInstFormat1(v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			iprint("DP3    "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   .   "+
-			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			       " ("+hex(inst["extid"])+")")
-		elif opcode==0x02:
-			inst=parseInstFormat1(v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			iprint("DP4    "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   .   "+
-			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			       " ("+hex(inst["extid"])+")")
-		elif opcode==0x08:
-			inst=parseInstFormat1(v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			iprint("MUL    "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   .   "+
-			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			       " ("+hex(inst["extid"])+")")
-		elif opcode==0x09:
-			inst=parseInstFormat1(v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			iprint("MAX    "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   .   "+
-			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			       " ("+hex(inst["extid"])+")")
-		elif opcode==0x0A:
-			inst=parseInstFormat1(v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			iprint("MIN    "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   .   "+
-			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			       " ("+hex(inst["extid"])+")")
-		elif opcode==0x0B:
-			inst=parseInstFormat1(v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			iprint("DIV?   "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   .   "+
-			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			       " ("+hex(inst["extid"])+")")
-		elif opcode==0x13:
-			inst=parseInstFormat1(v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			iprint("MOV    "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-				" ("+hex(inst["extid"])+", src2: "+hex(inst["src2"])+")")
+
+		if opcode in instList:
+			fmt=instList[opcode]["format"]
+			inst=fmtList[fmt][0](v)
+			fmtList[fmt][1](instList[opcode]["name"], inst, e, lt, vt, ut, ot)
 		elif opcode==0x21:
 			iprint("END")
 		elif opcode==0x22:
@@ -248,12 +198,6 @@ def parseCode(data, e, lt, vt, ut, ot):
 			       "   <-	"+
 			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
 				" ("+hex(inst["extid"])+", src2: "+hex(inst["src2"])+")")
-		elif opcode==0x24 or opcode==0x25 or opcode==0x26:
-			inst=parseInstFormat2(v)
-			addr=inst["addr"]
-			nmem = "JUMP" if (inst["flags"] & 0x20) else "CALL"
-			iprint(nmem+"   "+getLabelSymbol(inst["addr"], lt)+
-			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 		elif  opcode==0x27:
 			inst=parseInstFormat2(v)
 			addr=inst["addr"]
@@ -276,17 +220,17 @@ def parseCode(data, e, lt, vt, ut, ot):
 			       "   .   "+
 			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+")")
-		# elif opcode==0x2D:
-		#	inst=parseInstFormat1(v)
-		#	ext=e[inst["extid"]][0]
-		#	extd=parseExt(ext)
-		#	iprint("SUB?   "+
-		#	       getOutputSymbol(, otinst["dst"])+"."+extd["dstcomp"]+
-		#	       "   <-	"+
-		#	       getInputSymbol(i, utnst["src1"], vt)+"."+(parseComponentSwizzle(extd["src1"]))+
-		#	       "   .   "+
-		#	       getInputSymbol(i, utnst["src2"], vt)+"."+(parseComponentSwizzle(extd["src2"]))+
-		#	       " ("+hex(inst["extid"])+")")
+		elif opcode==0x2D:
+			inst=parseInstFormat1(v)
+			ext=e[inst["extid"]][0]
+			extd=parseExt(ext)
+			iprint("SUB?   "+
+			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
+			       "   <-	"+
+			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       "   .   "+
+			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       " ("+hex(inst["extid"])+")")
 		else:
 			inst=parseInstFormat1(v)
 			if inst["extid"] in e:
