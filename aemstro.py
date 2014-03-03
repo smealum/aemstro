@@ -193,11 +193,22 @@ def parseCode(data, e, lt, vt, ut, ot):
 			       "   .   "+
 			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+")")
-		elif opcode==0x09 or opcode==0x0A:
+		elif opcode==0x09:
 			inst=parseInstFormat1(v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
-			iprint("CLAMP? "+
+			iprint("MAX    "+
+			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
+			       "   <-	"+
+			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			       "   .   "+
+			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			       " ("+hex(inst["extid"])+")")
+		elif opcode==0x0A:
+			inst=parseInstFormat1(v)
+			ext=e[inst["extid"]][0]
+			extd=parseExt(ext)
+			iprint("MIN    "+
 			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
 			       "   <-	"+
 			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+

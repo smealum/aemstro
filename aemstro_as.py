@@ -34,7 +34,13 @@ instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
 instList["dp4"]={"opcode" : 0x02, "format" : 0}
 instList["mul"]={"opcode" : 0x08, "format" : 0}
+instList["max"]={"opcode" : 0x09, "format" : 0}
+instList["min"]={"opcode" : 0x0A, "format" : 0}
 instList["mov"]={"opcode" : 0x13, "format" : 0}
+
+#makes copy pasting to hex editor easier
+def printLE(v):
+	print("%02X%02X%02X%02X"%(v&0xFF,(v>>8)&0xFF,(v>>16)&0xFF,(v>>24)&0xFF))
 
 def parseInstruction(s):
 	s=s.lower()
@@ -49,5 +55,6 @@ def parseInstruction(s):
 				out["opcode"]=instList[name]["opcode"]
 				v=fmtList[fmt][1](out)
 				print(hex(v))
+				printLE(v)
 		else:
 			print(name+" : no such instruction")
