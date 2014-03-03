@@ -131,6 +131,12 @@ def parseInstFormat2(v):
 			"addr"   : (v>>8)&0x3FFC,
 			"flags"  : (v>>22)&0x3F,
 			"ret"    : (v)&0x3FF}
+#?
+def parseInstFormat3(v):
+	return {"opcode" : v>>26,
+			"src2"   : (v>>0)&0x7F,
+			"src1"   : (v>>7)&0x7F,
+			"dst"    : (v>>14)&0x7F}
 
 def parseCode(data, e, lt, vt, ut, ot):
 	l=len(data)
@@ -143,11 +149,11 @@ def parseCode(data, e, lt, vt, ut, ot):
 			iprint(lt[k][1]+":")
 
 		iprint("%08x [%08x]	"%(k,v), True)
-		if opcode==0x00: #could be SUB ?
+		if opcode==0x00:
 			inst=parseInstFormat1(v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
-			iprint("ADD?   "+
+			iprint("ADD    "+
 			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
 			       "   <-	"+
 			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
@@ -231,13 +237,19 @@ def parseCode(data, e, lt, vt, ut, ot):
 			       "   <-	"+
 			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
 				" ("+hex(inst["extid"])+", src2: "+hex(inst["src2"])+")")
-		elif opcode==0x24 or opcode==0x25 or opcode==0x26 or opcode==0x27:
+		elif opcode==0x24 or opcode==0x25 or opcode==0x26:
 			inst=parseInstFormat2(v)
 			addr=inst["addr"]
 			nmem = "JUMP" if (inst["flags"] & 0x20) else "CALL"
-			iprint(nmem+"	"+getLabelSymbol(inst["addr"], lt)+
+			iprint(nmem+"   "+getLabelSymbol(inst["addr"], lt)+
 			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
-		elif opcode==0x28:
+		elif  opcode==0x27:
+			inst=parseInstFormat2(v)
+			addr=inst["addr"]
+			iprint("IF?    "+getLabelSymbol(inst["addr"], lt)+
+					", b"+str(inst['flags']&0x7)+
+			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
+		elif  opcode==0x28:
 			inst=parseInstFormat2(v)
 			addr=inst["addr"]
 			iprint("IF?    "+getLabelSymbol(inst["addr"], lt)+
@@ -277,7 +289,14 @@ def parseCode(data, e, lt, vt, ut, ot):
 				       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 				       " ("+hex(inst["extid"])+")")
 			else:
-				iprint("???    invalid extension id")
+				inst=parseInstFormat3(v)
+				iprint("???    "+
+				       getOutputSymbol(inst["dst"], ot)+
+				       "   <-	"+
+				       getInputSymbol(inst["src1"], vt[0], ut)+
+				       "   .   "+
+				       getInputSymbol(inst["src2"], vt[1], ut)+
+				       " (invalid extension id)")
 
 		k+=0x4
 
@@ -324,7 +343,7 @@ def parseVarTable(data, sym):
 		base=transformRegisterValue(v1)
 		end=transformRegisterValue(v2)
 
-		iprint(getRegisterName(v1)+" - "+getRegisterName(v2)+" : "+parseSymbol(sym,off)+"["+str(0)+"]")
+		iprint(getRegisterName(v1)+" - "+getRegisterName(v2)+" : "+parseSymbol(sym,off))
 		for k in range(base, end+1):
 			name=parseSymbol(sym,off)+"["+str(k-base)+"]"
 			if k<0x20:
@@ -339,7 +358,7 @@ def parseVarTable(data, sym):
 
 def parseUniformTable(data, sym):
 	l=len(data)
-	iprint("Uniforms :")
+	iprint("Constants :")
 	indentOut()
 	out={}
 	for i in range(0,l,0x14):
