@@ -60,10 +60,14 @@ def getRegisterNameSRC1(v):
 		return "c"+str(v-0x20)
 
 def getRegisterNameSRC2(v):
-	if v<0x20:
-		return "v"+str(v&0xF)
-	elif v<0x6D:
-		return "c"+str(v-0x20)
+	# if v<0x20:
+	# 	return "v"+str(v&0xF)
+	# elif v<0x6D:
+	# 	return "c"+str(v-0x20)
+	# else:
+	# 	return "r"+str(v-0x6D)
+	if v<0x6D:
+		return "c"+str(v>>2)
 	else:
 		return "r"+str(v-0x6D)
 
@@ -191,13 +195,26 @@ def printInstFormat1(n, inst, e, lt, vt, ut, ot):
 					" ("+hex(inst["extid"])+")"],
 					[8, 16, None, 16, None, 16, None])
 
+def printInstFormat4(n, inst, e, lt, vt, ut, ot):
+	ext=e[inst["extid"]][0]
+	extd=parseExt(ext)
+	outputStringList([n,
+					# getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
+					getRegisterNameDST(inst["dst"])+"."+extd["dstcomp"],
+					" <- ",
+					# getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"])),
+					getRegisterNameSRC1(inst["src1"])+"."+(parseComponentSwizzle(extd["src1"])),
+					"   ", "",
+					" ("+hex(inst["extid"])+")"],
+					[8, 16, None, 16, None, 16, None])
+
 def printInstFormat2(n, inst, e, lt, vt, ut, ot):
 	iprint(n + " "*(7-len(n)) +
 			getLabelSymbol(inst["addr"], lt)+
 			" ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 
 instList={}
-fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2)]
+fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4)]
 
 instList[0x00]={"name" : "ADD", "format" : 0}
 instList[0x01]={"name" : "DP3", "format" : 0}
@@ -205,11 +222,12 @@ instList[0x02]={"name" : "DP4", "format" : 0}
 instList[0x08]={"name" : "MUL", "format" : 0}
 instList[0x09]={"name" : "MAX", "format" : 0}
 instList[0x0A]={"name" : "MIN", "format" : 0}
-instList[0x13]={"name" : "MOV", "format" : 0}
+instList[0x13]={"name" : "MOV", "format" : 3}
 instList[0x24]={"name" : "CALL", "format" : 1}
 instList[0x25]={"name" : "CALL", "format" : 1}
 instList[0x26]={"name" : "JUMP", "format" : 1}
 instList[0x27]={"name" : "JUMP", "format" : 1}
+instList[0x2e]={"name" : "CMP?", "format" : 0}
 
 def parseCode(data, e, lt, vt, ut, ot):
 	l=len(data)
@@ -231,15 +249,15 @@ def parseCode(data, e, lt, vt, ut, ot):
 			iprint("END")
 		elif opcode==0x22:
 			iprint("FLUSH")
-		elif opcode==0x2e:
-			inst=parseInstFormat1(v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			iprint("CMP?   "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-				" ("+hex(inst["extid"])+", src2: "+hex(inst["src2"])+")")
+		# elif opcode==0x2e:
+		# 	inst=parseInstFormat1(v)
+		# 	ext=e[inst["extid"]][0]
+		# 	extd=parseExt(ext)
+		# 	iprint("CMP?   "+
+		# 	       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
+		# 	       "   <-	"+
+		# 	       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+		# 		" ("+hex(inst["extid"])+", src2: "+hex(inst["src2"])+")")
 		elif  opcode==0x27:
 			inst=parseInstFormat2(v)
 			addr=inst["addr"]
