@@ -66,8 +66,10 @@ def getRegisterNameSRC2(v):
 	# 	return "c"+str(v-0x20)
 	# else:
 	# 	return "r"+str(v-0x6D)
-	if v<0x6D:
-		return "c"+str(v>>2)
+	if v<0x20:
+		return "v"+str(int(v/4))
+	elif v<0x6D:
+		return "c"+str(v>>1)
 	else:
 		return "r"+str(v-0x6D)
 
