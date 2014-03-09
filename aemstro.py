@@ -51,15 +51,18 @@ def parseExtTable(data):
 	out=[]
 	for i in range(0,l,8):
 		out+=[(getWord(data, i), getWord(data, i+0x4))]
+	print([hex(k[0]) for k in out])
 	return out
 
 def getRegisterNameSRC1(v):
+	return ("r%02X"%(v))
 	if v<0x20:
 		return "v"+str(v&0xF)
 	else:
 		return "c"+str(v-0x20)
 
 def getRegisterNameSRC2(v):
+	return ("r%02X"%(v))
 	# if v<0x20:
 	# 	return "v"+str(v&0xF)
 	# elif v<0x6D:
@@ -74,6 +77,7 @@ def getRegisterNameSRC2(v):
 		return "r"+str(v-0x6D)
 
 def getRegisterNameDST(v):
+	return ("r%02X"%(v))
 	if v<0x20:
 		return "o"+str((v&0xF)>>2)
 	elif v<0x6D:
@@ -83,12 +87,12 @@ def getRegisterNameDST(v):
 
 def getRegisterName(v):
 	return ("r%02X"%(v))
-	if v<16:
-		return "v"+str(v&0xF)
-	elif v<120:
-		return "c"+str(v-16)
-	else:
-		return "b"+str(v-120)
+	# if v<16:
+	# 	return "v"+str(v&0xF)
+	# elif v<120:
+	# 	return "c"+str(v-16)
+	# else:
+	# 	return "b"+str(v-120)
 
 def getValue(v, t):
 	return t[v] if v in t else getRegisterName(v)
@@ -166,6 +170,12 @@ def parseInstFormat3(v):
 			"src2"   : (v>>0)&0x7F,
 			"src1"   : (v>>7)&0x7F,
 			"dst"    : (v>>14)&0x7F}
+# MOV?
+def parseInstFormat4(v):
+	return {"opcode" : v>>26,
+			"src1"   : (v>>7)&0x7F,
+			"dst"    : (v>>14)&0x7F,
+			"extid"    : (v)&0x3F}
 
 def outputStringList(strl, fmtl):
 	l=len(strl)
@@ -216,7 +226,7 @@ def printInstFormat2(n, inst, e, lt, vt, ut, ot):
 			" ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 
 instList={}
-fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4)]
+fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat4, printInstFormat4)]
 
 instList[0x00]={"name" : "ADD", "format" : 0}
 instList[0x01]={"name" : "DP3", "format" : 0}
