@@ -50,6 +50,10 @@ class DVLE(object):
 
 	#(code offset, symbol offset)
 	def addLabel(self, label):
+		if label[1]=="main":
+			self.setMain(label[0])
+		elif label[1]=="endmain":
+			self.setEndmain(label[0])
 		self._label.append((label[0],self.addSymbol(label[1])))
 
 	#binary word tuple
@@ -129,6 +133,9 @@ class DVLP(object):
 	def addOpdesc(self, opdesc):
 		self._opdesc.append(opdesc)
 		return len(self._opdesc)
+
+	def getCodelength(self):
+		return len(self._code)
 
 	def toBinary(self):
 		ret=[]
@@ -217,10 +224,18 @@ def parseFormat1(s):
 			"src2" : getRegisterFromName(r.group(3)),
 			"extid" : int(r.group(4),0)}
 	else:
-		print("encountered error while parsing instruction")
+		raise Exception("encountered error while parsing instruction")
+
+def assembleFormat3(d):
+	return (d["opcode"]<<26);
+
+def parseFormat3(s):
+	# doesn't check that there are no operands.
+	# (but really if you want to be an idiot and add useless operands to your code, go ahead)
+	return {}
 
 instList={}
-fmtList=[(parseFormat1, assembleFormat1)]
+fmtList=[(parseFormat1, assembleFormat1), None, (parseFormat3, assembleFormat3)]
 
 instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
@@ -229,6 +244,8 @@ instList["mul"]={"opcode" : 0x08, "format" : 0}
 instList["max"]={"opcode" : 0x09, "format" : 0}
 instList["min"]={"opcode" : 0x0A, "format" : 0}
 instList["mov"]={"opcode" : 0x13, "format" : 0}
+instList["flush"]={"opcode" : 0x22, "format" : 2}
+instList["end"]={"opcode" : 0x21, "format" : 2}
 
 #makes copy pasting to hex editor easier
 def printLE(v):
@@ -243,12 +260,19 @@ def parseInstruction(s):
 		if name in instList:
 			fmt=instList[name]["format"]
 			out=fmtList[fmt][0](r.group(2))
-			if out:
-				out["opcode"]=instList[name]["opcode"]
-				v=fmtList[fmt][1](out)
-				return v
+			out["opcode"]=instList[name]["opcode"]
+			v=fmtList[fmt][1](out)
+			return v
 		else:
 			print(name+" : no such instruction")
+	return None
+
+def parseLabel(s):
+	s=s.lower()
+	p=re.compile("^\s*([a-z0-9]*):")
+	r=p.match(s)
+	if r:
+		return r.group(1)
 	return None
 
 def parseLine(dvlp, dvle, l):
@@ -258,14 +282,18 @@ def parseLine(dvlp, dvle, l):
 	while (k<len(l) and (l[k]==" " or l[k]=="	")):
 		k+=1
 	l=l[k:]
-	
+
 	if len(l)>0:
 		if l[0]==".": #directive
 			None
-		else: #instruction
-			v=parseInstruction(l)
-			if l:
-				dvlp.addInstruction(v)
+		else:
+			v=parseLabel(l)
+			if v: #label
+				dvle.addLabel((dvlp.getCodelength(), v))
+			else: #instruction
+				v=parseInstruction(l)
+				if l:
+					dvlp.addInstruction(v)
 
 
 # dvle=DVLE(0x0)
