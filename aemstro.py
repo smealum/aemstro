@@ -362,7 +362,7 @@ def transformRegisterValue(v):
 
 def parseVarTable(data, sym):
 	l=len(data)
-	iprint("Variables :")
+	iprint("Uniforms :")
 	indentOut()
 	src1={}
 	src2={}

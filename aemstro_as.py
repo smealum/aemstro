@@ -113,7 +113,7 @@ class DVLE(object):
 
 		for k in self._inmap:
 			ret.append(k[2])
-			ret.append(((k[2]&0xFFFF)<<16)|(k[1]&0xFFFF))
+			ret.append(((k[1]&0xFFFF)<<16)|(k[0]&0xFFFF))
 
 		retb=bytearray()
 		for k in ret:
@@ -236,8 +236,23 @@ def parseFormat3(s):
 	# (but really if you want to be an idiot and add useless operands to your code, go ahead)
 	return {}
 
+def assembleFormat4(d):
+	return (d["opcode"]<<26)|((d["dst"]&0x7F)<<19)|((d["src1"]&0x7F)<<12)|(d["extid"]&0x3F);
+
+def parseFormat4(s):
+	operandFmt="[^\s,]*"
+	descFmt="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
+	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+") \(("+descFmt+")\)")
+	r=p.match(s)
+	if r:
+		return {"dst" : getRegisterFromName(r.group(1)),
+			"src1" : getRegisterFromName(r.group(2)),
+			"extid" : int(r.group(3),0)}
+	else:
+		raise Exception("encountered error while parsing instruction")
+
 instList={}
-fmtList=[(parseFormat1, assembleFormat1), None, (parseFormat3, assembleFormat3)]
+fmtList=[(parseFormat1, assembleFormat1), None, (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4)]
 
 instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
@@ -245,7 +260,7 @@ instList["dp4"]={"opcode" : 0x02, "format" : 0}
 instList["mul"]={"opcode" : 0x08, "format" : 0}
 instList["max"]={"opcode" : 0x09, "format" : 0}
 instList["min"]={"opcode" : 0x0A, "format" : 0}
-instList["mov"]={"opcode" : 0x13, "format" : 0}
+instList["mov"]={"opcode" : 0x13, "format" : 3}
 instList["flush"]={"opcode" : 0x22, "format" : 2}
 instList["end"]={"opcode" : 0x21, "format" : 2}
 
@@ -267,7 +282,7 @@ def parseOut(dvlp, dvle, s):
 	reg=int(s[0][1:])
 	if s[1] in outputTypes:
 		type=outputTypes[s[1]]
-		dvle.addOutput((0x00000000, type|(reg<<16)))
+		dvle.addOutput((type|(reg<<16), 0x00000000))
 
 swizVal={"w":0x3,"z":0x2,"y":0x1,"x":0x0}
 
@@ -287,11 +302,18 @@ def parseOpdesc(dvlp, dvle, s):
 			swiz[i]=((swiz[i]<<2)|swizVal[l[k]])
 	dvlp.addOpdesc(((1<<31)|(swiz[1]<<14)|(swiz[0]<<5)|(mask),0x0000000F))
 
+def parseUniform(dvlp, dvle, s):
+	s=s.split(",")
+	for k in range(len(s)):
+		s[k]=s[k].replace(" ", "")
+	dvle.addInput((int(s[0],0),int(s[1],0),s[2]))
+
 dirList={}
 
 dirList["const"]=(parseConst)
 dirList["out"]=(parseOut)
 dirList["opdesc"]=(parseOpdesc)
+dirList["uniform"]=(parseUniform)
 
 def parseInstruction(s):
 	s=s.lower()
@@ -344,13 +366,17 @@ def parseLine(dvlp, dvle, l):
 				if v:
 					dvlp.addInstruction(v)
 
-dvlb=DVLB()
-dvle=DVLE(0x0)
+if len(sys.argv)<3:
+	print("AEMSTRO AS :")
+	print("    aemstro_as.py  <input.vsh>  <output.shbin>")
+else:
+	dvlb=DVLB()
+	dvle=DVLE(0x0)
 
-with open("test.vsh", "r") as f:
-	for line in f:
-		parseLine(dvlb.getDVLP(), dvle, line)
+	with open(sys.argv[1], "r") as f:
+		for line in f:
+			parseLine(dvlb.getDVLP(), dvle, line)
 
-dvlb.addDVLE(dvle)
+	dvlb.addDVLE(dvle)
 
-open("test.shbin","wb").write(dvlb.toBinary())
+	open(sys.argv[2],"wb").write(dvlb.toBinary())
