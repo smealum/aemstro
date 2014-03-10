@@ -247,9 +247,13 @@ instList["mov"]={"opcode" : 0x13, "format" : 0}
 instList["flush"]={"opcode" : 0x22, "format" : 2}
 instList["end"]={"opcode" : 0x21, "format" : 2}
 
-#makes copy pasting to hex editor easier
-def printLE(v):
-	print("%02X%02X%02X%02X"%(v&0xFF,(v>>8)&0xFF,(v>>16)&0xFF,(v>>24)&0xFF))
+def parseConst(dvle, s):
+	s=s.split(",")
+	dvle.addConstantF((int(s[0],0), float(s[1]), float(s[2]), float(s[3]), float(s[4])))
+
+dirList={}
+
+dirList["const"]=(parseConst)
 
 def parseInstruction(s):
 	s=s.lower()
@@ -283,16 +287,23 @@ def parseLine(dvlp, dvle, l):
 		k+=1
 	l=l[k:]
 
-	if len(l)>0:
+	if len(l)>1:
 		if l[0]==".": #directive
-			None
+			p=re.compile("^\s*\.([^\s]*)(.*)")
+			r=p.match(l)
+			if r:
+				name=r.group(1)
+				if name in dirList:
+					dirList[name](dvle, r.group(2))
+				else:
+					print(name+" : no such directive")
 		else:
 			v=parseLabel(l)
 			if v: #label
 				dvle.addLabel((dvlp.getCodelength(), v))
 			else: #instruction
 				v=parseInstruction(l)
-				if l:
+				if v:
 					dvlp.addInstruction(v)
 
 
