@@ -3,6 +3,8 @@ import os
 import re
 import struct
 
+#TODO : add parsing checks, handle errors more gracefully
+
 def toFloat24(f):
 	f=struct.pack('f', f)
 	s=f[3]>>7
@@ -247,7 +249,7 @@ instList["mov"]={"opcode" : 0x13, "format" : 0}
 instList["flush"]={"opcode" : 0x22, "format" : 2}
 instList["end"]={"opcode" : 0x21, "format" : 2}
 
-def parseConst(dvle, s):
+def parseConst(dvlp, dvle, s):
 	s=s.split(",")
 	dvle.addConstantF((int(s[0],0), float(s[1]), float(s[2]), float(s[3]), float(s[4])))
 
@@ -258,7 +260,7 @@ outputTypes={"result.position" : 0x0,
 			"result.texcoord2" : 0x6,
 			"result.view" : 0x8}
 
-def parseOut(dvle, s):
+def parseOut(dvlp, dvle, s):
 	s=s.split(",")
 	s[0]=s[0].replace(" ", "")
 	s[1]=s[1].replace(" ", "")
@@ -267,10 +269,29 @@ def parseOut(dvle, s):
 		type=outputTypes[s[1]]
 		dvle.addOutput((0x00000000, type|(reg<<16)))
 
+swizVal={"w":0x3,"z":0x2,"y":0x1,"x":0x0}
+
+def parseOpdesc(dvlp, dvle, s):
+	s=s.split(",")
+	for k in range(len(s)):
+		s[k]=s[k].replace(" ", "")
+	#dst mask
+	mask=0
+	for k in range(4):
+		if s[0][k]!="_":
+			mask|=1<<(3-k)
+	swiz=[0,0]
+	for i in range(2):
+		l=s[1+i]
+		for k in range(4):
+			swiz[i]=((swiz[i]<<2)|swizVal[l[k]])
+	dvlp.addOpdesc(((1<<31)|(swiz[1]<<14)|(swiz[0]<<5)|(mask),0x0000000F))
+
 dirList={}
 
 dirList["const"]=(parseConst)
 dirList["out"]=(parseOut)
+dirList["opdesc"]=(parseOpdesc)
 
 def parseInstruction(s):
 	s=s.lower()
@@ -311,7 +332,7 @@ def parseLine(dvlp, dvle, l):
 			if r:
 				name=r.group(1)
 				if name in dirList:
-					dirList[name](dvle, r.group(2))
+					dirList[name](dvlp, dvle, r.group(2))
 				else:
 					print(name+" : no such directive")
 		else:
