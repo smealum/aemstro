@@ -51,7 +51,6 @@ def parseExtTable(data):
 	out=[]
 	for i in range(0,l,8):
 		out+=[(getWord(data, i), getWord(data, i+0x4))]
-	print([hex(k[0]) for k in out])
 	return out
 
 def getRegisterNameSRC1(v):
@@ -123,12 +122,12 @@ def unindentOut():
 	global numIdent
 	numIdent=numIdent-1
 
-def iprint(str, e=False):
+def iprint(s, e=False):
 	global numIdent
 	if e:
-		print("	"*numIdent+str,end='')
+		print("	"*numIdent+s,end='')
 	else:
-		print("	"*numIdent+str)
+		print("	"*numIdent+s)
 
 comp=["x", "y", "z", "w"]
 def parseComponentMask(v):
