@@ -1,6 +1,9 @@
 ; setup constants
 .const 5, 0.0, 1.0, 2.0, 3.0
 
+; setup outmap
+.out o0, result.position
+
 main:
 	; result.pos = transformMtx * in.pos
 	dp4 d40, d20, d00 (0x0)

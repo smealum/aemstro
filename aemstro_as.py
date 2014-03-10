@@ -251,9 +251,26 @@ def parseConst(dvle, s):
 	s=s.split(",")
 	dvle.addConstantF((int(s[0],0), float(s[1]), float(s[2]), float(s[3]), float(s[4])))
 
+outputTypes={"result.position" : 0x0,
+			"result.color" : 0x2,
+			"result.texcoord0" : 0x3,
+			"result.texcoord1" : 0x5,
+			"result.texcoord2" : 0x6,
+			"result.view" : 0x8}
+
+def parseOut(dvle, s):
+	s=s.split(",")
+	s[0]=s[0].replace(" ", "")
+	s[1]=s[1].replace(" ", "")
+	reg=int(s[0][1:])
+	if s[1] in outputTypes:
+		type=outputTypes[s[1]]
+		dvle.addOutput((0x00000000, type|(reg<<16)))
+
 dirList={}
 
 dirList["const"]=(parseConst)
+dirList["out"]=(parseOut)
 
 def parseInstruction(s):
 	s=s.lower()
@@ -305,15 +322,6 @@ def parseLine(dvlp, dvle, l):
 				v=parseInstruction(l)
 				if v:
 					dvlp.addInstruction(v)
-
-
-# dvle=DVLE(0x0)
-# dvle.addLabel((0x100, "testLabel"))
-# dvle.addLabel((0x102, "testLabel2"))
-# dvle.addConstantF((0x5, 0.0, 1.0, 2.0, 3.0))
-
-# dvlb=DVLB()
-# dvlb.addDVLE(dvle)
 
 dvlb=DVLB()
 dvle=DVLE(0x0)
