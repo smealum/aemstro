@@ -226,7 +226,8 @@ def printInstFormat2(n, inst, e, lt, vt, ut, ot):
 			" ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 
 instList={}
-fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat4, printInstFormat4)]
+# fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat4, printInstFormat4)]
+fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4)]
 
 instList[0x00]={"name" : "ADD", "format" : 0}
 instList[0x01]={"name" : "DP3", "format" : 0}

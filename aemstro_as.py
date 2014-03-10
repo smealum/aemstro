@@ -1,6 +1,195 @@
 import sys
 import os
 import re
+import struct
+
+def toFloat24(f):
+	f=struct.pack('f', f)
+	s=f[3]>>7
+	tmp=(((f[3]<<1)|(f[2]>>7))&0xFF)-0x40
+	tmp2=(((f[0])|(f[1]<<8)|(f[2]<<16))>>7)&0xFFFF
+	if tmp>=0:
+		tmp2|=tmp<<16
+		tmp2|=s<<23
+	else:
+		tmp2=s<<23
+	return tmp2
+
+class DVLE(object):
+	def __init__(self, type):
+		self._main = 0
+		self._endmain = 0
+		self._type = type
+		self._const = []
+		self._label = []
+		self._outmap = []
+		self._inmap = []
+		self._symbol = bytearray()
+		self._symbolnum = 0
+
+	def setMain(self, main):
+		self._main = main
+
+	def setEndmain(self, endmain):
+		self._endmain = endmain
+
+	#binary word tuple
+	def addConstant(self, const):
+		self._const.append(const)
+
+	#(reg, x, y, z, w)
+	def addConstantF(self, const):
+		self._const.append((const[0]<<16, toFloat24(const[1]), toFloat24(const[2]), toFloat24(const[3]), toFloat24(const[4])))
+
+	#string
+	def addSymbol(self, s):
+		ret=len(self._symbol)
+		self._symbol+=bytearray(s, "ascii")+bytearray(b"\x00")
+		self._symbolnum+=1
+		return ret
+
+	#(code offset, symbol offset)
+	def addLabel(self, label):
+		self._label.append((label[0],self.addSymbol(label[1])))
+
+	#binary word tuple
+	def addOutput(self, out):
+		self._outmap.append(out)
+
+	#(startreg, endreg, symbol offset)
+	def addInput(self, ind):
+		self._inmap.append((ind[0],ind[1],self.addSymbol(ind[2])))
+
+	def toBinary(self):
+		ret=[]
+
+		offsetConst=0x40
+		offsetLabel=offsetConst+len(self._const)*0x14
+		offsetOutmap=offsetLabel+len(self._label)*0x10
+		offsetInmap=offsetOutmap+len(self._outmap)*0x8
+		offsetSymbol=offsetInmap+len(self._inmap)*0x8
+
+		ret.append(0x454C5644) #DVLE magic
+		ret.append((self._type&1)<<16)
+		ret.append(self._main)
+		ret.append(self._endmain)
+		ret.append(0x00000000) # ?
+		ret.append(0x00000000) # ?
+		ret.append(offsetConst)
+		ret.append(len(self._const))
+		ret.append(offsetLabel)
+		ret.append(len(self._label))
+		ret.append(offsetOutmap)
+		ret.append(len(self._outmap))
+		ret.append(offsetInmap)
+		ret.append(len(self._inmap))
+		ret.append(offsetSymbol)
+		ret.append(len(self._symbol))
+
+		for k in self._const:
+			ret.append(k[0])
+			ret.append(k[1])
+			ret.append(k[2])
+			ret.append(k[3])
+			ret.append(k[4])
+
+		i=0
+		for k in self._label:
+			ret.append(i)
+			ret.append(k[0])
+			ret.append(0x00000000) # ?
+			ret.append(k[1])
+			i+=1
+
+		for k in self._outmap:
+			ret.append(k[0])
+			ret.append(k[1])
+
+		for k in self._inmap:
+			ret.append(k[2])
+			ret.append(((k[2]&0xFFFF)<<16)|(k[1]&0xFFFF))
+
+		retb=bytearray()
+		for k in ret:
+			retb+=struct.pack("I",k)
+		retb+=self._symbol
+
+		return retb
+
+
+class DVLP(object):
+	def __init__(self):
+		self._code = []
+		self._opdesc = []
+
+	def addInstruction(self, inst):
+		self._code.append(inst)
+		return len(self._code)
+
+	def addOpdesc(self, opdesc):
+		self._opdesc.append(opdesc)
+		return len(self._opdesc)
+
+	def toBinary(self):
+		ret=[]
+
+		offsetCode=0x28
+		offsetOpdesc=offsetCode+len(self._code)*0x4
+		symbolOffset=offsetOpdesc+len(self._opdesc)*0x8
+
+		ret.append(0x504C5644) #DVLP magic
+		ret.append(0x00000000) # ?
+		ret.append(offsetCode)
+		ret.append(len(self._code))
+		ret.append(offsetOpdesc)
+		ret.append(len(self._opdesc))
+		ret.append(symbolOffset)
+		ret.append(0x00000000) # ?
+		ret.append(0x00000000) # ?
+		ret.append(0x00000000) # ?
+
+		retb=bytearray()
+		for k in ret:
+			retb+=struct.pack("I",k)
+		for k in self._code:
+			retb+=struct.pack("I",k)
+		for k in self._opdesc:
+			retb+=struct.pack("I",k[0])
+			retb+=struct.pack("I",k[1])
+
+		return retb
+
+
+class DVLB(object):
+	def __init__(self):
+		self._dvlp = DVLP()
+		self._dvle = []
+
+	def getDVLP(self):
+		return self._dvlp
+
+	def addDVLE(self, dvle):
+		self._dvle.append(dvle)
+
+	def toBinary(self):
+		ret=[]
+
+		ret.append(0x424C5644) #DVLB magic
+		ret.append(len(self._dvle))
+
+		off=len(self._dvle)*0x4+0x8
+		retb=bytearray()
+		retb+=self._dvlp.toBinary()
+		for k in self._dvle:
+			ret.append(off+len(retb))
+			retb+=k.toBinary()
+
+		retb2=bytearray()
+		for k in ret:
+			retb2+=struct.pack("I",k)
+
+		return retb2+retb
+
 
 def getRegisterFromName(s):
 	if s[0]=="v":
@@ -9,6 +198,8 @@ def getRegisterFromName(s):
 		return int(s[1:])+16
 	elif s[0]=="b":
 		return int(s[1:])+120
+	elif s[0]=="d": # direct hex; unambiguous
+		return int("0x"+s[1:],0)
 	else:
 		print("error : "+s+" is not a valid register name")
 
@@ -17,13 +208,14 @@ def assembleFormat1(d):
 
 def parseFormat1(s):
 	operandFmt="[^\s,]*"
-	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+"),\s*("+operandFmt+") \(([0-9]*)\)")
+	descFmt="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
+	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+"),\s*("+operandFmt+") \(("+descFmt+")\)")
 	r=p.match(s)
 	if r:
 		return {"dst" : getRegisterFromName(r.group(1)),
 			"src1" : getRegisterFromName(r.group(2)),
 			"src2" : getRegisterFromName(r.group(3)),
-			"extid" : int(r.group(4))}
+			"extid" : int(r.group(4),0)}
 	else:
 		print("encountered error while parsing instruction")
 
@@ -54,7 +246,32 @@ def parseInstruction(s):
 			if out:
 				out["opcode"]=instList[name]["opcode"]
 				v=fmtList[fmt][1](out)
-				print(hex(v))
-				printLE(v)
+				return v
 		else:
 			print(name+" : no such instruction")
+	return None
+
+def parseLine(dvlp, dvle, l):
+	v=parseInstruction(l)
+	if l:
+		dvlp.addInstruction(v)
+
+
+# dvle=DVLE(0x0)
+# dvle.addLabel((0x100, "testLabel"))
+# dvle.addLabel((0x102, "testLabel2"))
+# dvle.addConstantF((0x5, 0.0, 1.0, 2.0, 3.0))
+
+# dvlb=DVLB()
+# dvlb.addDVLE(dvle)
+
+dvlb=DVLB()
+dvle=DVLE(0x0)
+
+with open("test.vsh", "r") as f:
+	for line in f:
+		parseLine(dvlb.getDVLP(), dvle, line)
+
+dvlb.addDVLE(dvle)
+
+open("test.shbin","wb").write(dvlb.toBinary())
