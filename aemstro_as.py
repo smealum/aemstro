@@ -252,9 +252,20 @@ def parseInstruction(s):
 	return None
 
 def parseLine(dvlp, dvle, l):
-	v=parseInstruction(l)
-	if l:
-		dvlp.addInstruction(v)
+	l=l.split(";")[0] #remove comments
+
+	k=0
+	while (k<len(l) and (l[k]==" " or l[k]=="	")):
+		k+=1
+	l=l[k:]
+	
+	if len(l)>0:
+		if l[0]==".": #directive
+			None
+		else: #instruction
+			v=parseInstruction(l)
+			if l:
+				dvlp.addInstruction(v)
 
 
 # dvle=DVLE(0x0)
