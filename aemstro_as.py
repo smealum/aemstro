@@ -213,7 +213,7 @@ def getRegisterFromName(s):
 		print("error : "+s+" is not a valid register name")
 
 def assembleFormat1(d):
-	return (d["opcode"]<<26)|((d["dst"]&0x7F)<<19)|((d["src1"]&0x7F)<<12)|((d["src2"]&0x7F)<<5)|(d["extid"]&0x1F);
+	return (d["opcode"]<<26)|((d["dst"]&0x7F)<<19)|((d["src1"]&0x7F)<<12)|((d["src2"]&0x7F)<<5)|(d["extid"]&0x1F)
 
 def parseFormat1(s):
 	operandFmt="[^\s,]*"
@@ -229,7 +229,7 @@ def parseFormat1(s):
 		raise Exception("encountered error while parsing instruction")
 
 def assembleFormat3(d):
-	return (d["opcode"]<<26);
+	return (d["opcode"]<<26)
 
 def parseFormat3(s):
 	# doesn't check that there are no operands.
@@ -237,7 +237,7 @@ def parseFormat3(s):
 	return {}
 
 def assembleFormat4(d):
-	return (d["opcode"]<<26)|((d["dst"]&0x7F)<<19)|((d["src1"]&0x7F)<<12)|(d["extid"]&0x3F);
+	return (d["opcode"]<<26)|((d["dst"]&0x7F)<<19)|((d["src1"]&0x7F)<<12)|(d["extid"]&0x3F)
 
 def parseFormat4(s):
 	operandFmt="[^\s,]*"
