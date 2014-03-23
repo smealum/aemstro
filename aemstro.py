@@ -153,10 +153,14 @@ def parseComponentSwizzle(v):
 
 def parseInstFormat1(v):
 	return {"opcode" : v>>26,
-			"src2"   : (v>>5)&0x7F,
-			"src1"   : (v>>12)&0x7F,
-			"dst"    : (v>>19)&0x7F,
-			"extid"  : (v)&0x1F}
+			# "src2"   : (v>>5)&0x7F,
+			"src2"   : (v>>7)&0x1F,
+			# "src1"   : (v>>12)&0x7F,
+			"src1"   : (v>>12)&0xFF,
+			# "dst"    : (v>>19)&0x7F,
+			"dst"    : (v>>21)&0x1F,
+			# "extid"  : (v)&0x1F}
+			"extid"  : (v)&0x7F}
 
 def parseInstFormat2(v):
 	return {"opcode" : v>>26,
@@ -354,10 +358,11 @@ def parseLabelTable(data, sym):
 def transformRegisterValue(v):
 	if v<16:
 		return (v&0xF)
-	elif v<120:
-		return v+16
-	else:
-		return -1
+	# elif v<120:
+	# 	return v+16
+	# else:
+	# 	return -1
+	return v+16
 
 
 def parseVarTable(data, sym):
