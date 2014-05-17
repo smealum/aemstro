@@ -91,7 +91,7 @@ def getRegisterName(v):
 	# elif v<120:
 	# 	return "c"+str(v-16)
 	# else:
-	# 	return "b"+str(v-120)
+	# 	return "b"+str(v-0x88)
 
 def getValue(v, t):
 	return t[v] if v in t else getRegisterName(v)
@@ -179,6 +179,12 @@ def parseInstFormat4(v):
 			"src1"   : (v>>7)&0x7F,
 			"dst"    : (v>>14)&0x7F,
 			"extid"    : (v)&0x3F}
+# CONDJUMP
+def parseInstFormat5(v):
+	return {"opcode" : v>>26,
+			"addr"   : (v>>8)&0x3FFC,
+			"bool"  : (v>>22)&0xF,
+			"ret"    : (v)&0x3FF}
 
 def outputStringList(strl, fmtl):
 	l=len(strl)
@@ -228,9 +234,19 @@ def printInstFormat2(n, inst, e, lt, vt, ut, ot):
 			getLabelSymbol(inst["addr"], lt)+
 			" ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 
+# CONDJUMP
+def printInstFormat5(n, inst, e, lt, vt, ut, ot):
+	outputStringList([n,
+					getLabelSymbol(inst["addr"], lt),
+					" ,  ",
+					getInputSymbol((inst['bool']&0xF)+0x88, vt[2], ut),
+					"   ", "",
+					" ("+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
+					[8, 16, None, 16, None, 16, None])
+
 instList={}
 # fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat4, printInstFormat4)]
-fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4)]
+fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5)]
 
 instList[0x00]={"name" : "ADD", "format" : 0}
 instList[0x01]={"name" : "DP3", "format" : 0}
@@ -241,8 +257,8 @@ instList[0x0A]={"name" : "MIN", "format" : 0}
 instList[0x13]={"name" : "MOV", "format" : 3}
 instList[0x24]={"name" : "CALL", "format" : 1}
 instList[0x25]={"name" : "CALL", "format" : 1}
-instList[0x26]={"name" : "JUMP", "format" : 1}
-instList[0x27]={"name" : "JUMP", "format" : 1}
+instList[0x26]={"name" : "CALLC", "format" : 4} #conditional call (uniform bool)
+instList[0x27]={"name" : "IFU", "format" : 4} #conditional jump (uniform bool)
 instList[0x2e]={"name" : "CMP?", "format" : 0}
 
 def parseCode(data, e, lt, vt, ut, ot):
@@ -274,17 +290,11 @@ def parseCode(data, e, lt, vt, ut, ot):
 		# 	       "   <-	"+
 		# 	       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
 		# 		" ("+hex(inst["extid"])+", src2: "+hex(inst["src2"])+")")
-		elif  opcode==0x27:
-			inst=parseInstFormat2(v)
-			addr=inst["addr"]
-			iprint("IF?    "+getLabelSymbol(inst["addr"], lt)+
-					", b"+str(inst['flags']&0x7)+
-			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
 		elif  opcode==0x28:
 			inst=parseInstFormat2(v)
 			addr=inst["addr"]
 			iprint("IF?    "+getLabelSymbol(inst["addr"], lt)+
-			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
+			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+" "+hex(inst['flags'])+")")
 		elif opcode==0x2A:
 			inst=parseInstFormat1(v)
 			ext=e[inst["extid"]][0]
@@ -371,6 +381,7 @@ def parseVarTable(data, sym):
 	indentOut()
 	src1={}
 	src2={}
+	srcb={}
 	for i in range(0,l,0x8):
 		off=getWord(data,i)
 		v1=getWord(data,i+4,2)
@@ -388,10 +399,12 @@ def parseVarTable(data, sym):
 				src2[k]=name
 			# else:
 			# 	src1[k]=name
+			if k>=0x88:
+				srcb[k]=parseSymbol(sym,off)
 
 	unindentOut()
 	print("")
-	return (src1,src2)
+	return (src1,src2,srcb)
 
 def parseConstTable(data, sym):
 	l=len(data)
