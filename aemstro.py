@@ -186,7 +186,7 @@ def parseInstFormat2(k, v, lt={}):
 		for i in range(ret["addr"],ret["addr"]+ret["ret"]*4,4):
 			indentLine(i)
 		if ret["ret"]>0:
-			lt[ret["addr"]]=(-1,"ELSE")
+			lt[ret["addr"]]=(-1,"ELSE_%X"%(k))
 	return ret
 
 #?
@@ -213,7 +213,7 @@ def parseInstFormat5(k, v, lt={}):
 		for i in range(ret["addr"],ret["addr"]+ret["ret"]*4,4):
 			indentLine(i)
 		if ret["ret"]>0:
-			lt[ret["addr"]]=(-1,"ELSE")
+			lt[ret["addr"]]=(-1,"ELSE_%X"%(k))
 	return ret
 
 def outputStringList(k, strl, fmtl):
@@ -289,11 +289,11 @@ instList[0x08]={"name" : "MUL", "format" : 0}
 instList[0x09]={"name" : "MAX", "format" : 0}
 instList[0x0A]={"name" : "MIN", "format" : 0}
 instList[0x13]={"name" : "MOV", "format" : 3}
-instList[0x24]={"name" : "CALL1", "format" : 1}
-instList[0x25]={"name" : "CALL2", "format" : 1}
+instList[0x24]={"name" : "CALL1", "format" : 1} #CALL1 is probably just a regular old CALL
+instList[0x25]={"name" : "CALL2", "format" : 1} #CALL2 is probably conditional (to CALLC what IF? is to IFU)
 instList[0x26]={"name" : "CALLC", "format" : 4} #conditional call (uniform bool)
 instList[0x27]={"name" : "IFU", "format" : 4} #conditional jump (uniform bool)
-instList[0x2e]={"name" : "CMP?", "format" : 0}
+instList[0x2e]={"name" : "CMP?", "format" : 0} #?
 
 def parseCode(data, e, lt, vt, ut, ot):
 	l=len(data)
@@ -314,7 +314,8 @@ def parseCode(data, e, lt, vt, ut, ot):
 			inst=fmtList[fmt][0](k, v, lt)
 			fmtList[fmt][1](k, instList[opcode]["name"], inst, e, lt, vt, ut, ot)
 		elif opcode==0x21:
-			outputStringList(k,["END"],[8])
+			# outputStringList(k,["END"],[8])
+			outputStringList(k,["RET"],[8])
 		elif opcode==0x22:
 			outputStringList(k,["FLUSH"],[8])
 		# elif opcode==0x2e:
