@@ -182,7 +182,7 @@ def parseInstFormat1(k, v, lt={}):
 def parseInstFormat2(k, v, lt={}):
 	ret={"opcode" : v>>26,
 			"addr"   : (v>>8)&0x3FFC,
-			"flags"  : (v>>22)&0x3F,
+			"flags"  : (v>>22)&0xF,
 			"ret"    : (v)&0x3FF}
 	if ret["opcode"]==0x28: #IF?
 		for i in range(k+4,ret["addr"],4):
@@ -292,12 +292,15 @@ instList[0x02]={"name" : "DP4", "format" : 0}
 instList[0x08]={"name" : "MUL", "format" : 0}
 instList[0x09]={"name" : "MAX", "format" : 0}
 instList[0x0A]={"name" : "MIN", "format" : 0}
+instList[0x0E]={"name" : "RCP", "format" : 0} #1/op1
+instList[0x0F]={"name" : "RSQ", "format" : 0} #1/sqrt(op1)
 instList[0x13]={"name" : "MOV", "format" : 3}
 instList[0x24]={"name" : "CALL1", "format" : 1} #CALL1 is probably just a regular old CALL
 instList[0x25]={"name" : "CALL2", "format" : 1} #CALL2 is probably conditional (to CALLC what IF? is to IFU)
 instList[0x26]={"name" : "CALLC", "format" : 4} #conditional call (uniform bool)
 instList[0x27]={"name" : "IFU", "format" : 4} #conditional jump (uniform bool)
-instList[0x2e]={"name" : "CMP?", "format" : 0} #?
+instList[0x2e]={"name" : "CMP1?", "format" : 0} #?
+instList[0x2f]={"name" : "CMP2?", "format" : 0} #?
 
 def parseCode(data, e, lt, vt, ut, ot):
 	l=len(data)
@@ -343,13 +346,15 @@ def parseCode(data, e, lt, vt, ut, ot):
 			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
-			iprint("EMITV? "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   .   "+
-			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			       " ("+hex(inst["extid"])+")")
+			# outputStringList(k,
+			# 		["EMITV? ",
+			# 	       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
+			# 	       " <- ",
+			# 	       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"])),
+			# 	       " , ",
+			# 	       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"])),
+			# 	       " ("+hex(inst["extid"])+")"])
+			printInstFormat1(k, "EMITV?", inst, e, lt, vt, ut, ot)
 		elif opcode==0x2D:
 			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
