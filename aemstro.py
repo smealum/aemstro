@@ -25,7 +25,11 @@ def unindentLine(k):
 	if not(k in lineIndentLevel):
 		lineIndentLevel[k]=0
 	lineIndentLevel[k]-=1
- 
+
+def resetIndentLevel():
+	for k in lineIndentLevel:
+		lineIndentLevel[k]=0
+
 def getWord(b, k, n=4):
 	return sum(list(map(lambda c: b[k+c]<<(c*8),range(n))))
 
@@ -373,10 +377,10 @@ def parseCode(data, e, lt, vt, ut, ot):
 				# 	getRegisterNameSRC2(inst["src2"])+"."+(parseComponentSwizzle(extd["src2"])),
 				# 	" ("+hex(inst["extid"])+")"],
 				# 	[8, 16, None, 16, None, 16, None])
-				printInstFormat1(k, "???", inst, e, lt, vt, ut, ot)
+				printInstFormat1(k, "???%02X"%(inst["opcode"]), inst, e, lt, vt, ut, ot)
 			else:
 				inst=parseInstFormat3(k, v)
-				outputStringList(k,["???",
+				outputStringList(k,["???%02X"%(inst["opcode"]),
 								       getOutputSymbol(inst["dst"], ot),
 								       " <- ",
 								       getInputSymbol(inst["src1"], vt[0], ut),
@@ -502,7 +506,7 @@ def parseDVLE(data,dvlp, k):
 	mainStart=getWord(data, 0x8)*4
 	mainEnd=getWord(data, 0xC)*4
 
-	lineIndentLevel={}
+	resetIndentLevel()
 
 	iprint("vertex shader" if shaderType==0x0 else "geometry shader")
 	iprint("main : "+hex(mainStart)+"-"+hex(mainEnd))
