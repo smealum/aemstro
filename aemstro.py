@@ -13,6 +13,18 @@ output={}
 # 0x4 : "glTexcoord",
 # 0x6 : "glColor?",
 # 0x8 : "glTexcoord?"}
+
+lineIndentLevel={}
+
+def indentLine(k):
+	if not(k in lineIndentLevel):
+		lineIndentLevel[k]=0
+	lineIndentLevel[k]+=1
+
+def unindentLine(k):
+	if not(k in lineIndentLevel):
+		lineIndentLevel[k]=0
+	lineIndentLevel[k]-=1
  
 def getWord(b, k, n=4):
 	return sum(list(map(lambda c: b[k+c]<<(c*8),range(n))))
@@ -76,13 +88,13 @@ def getRegisterNameSRC2(v):
 		return "r"+str(v-0x6D)
 
 def getRegisterNameDST(v):
-	return ("r%02X"%(v))
-	if v<0x20:
-		return "o"+str((v&0xF)>>2)
-	elif v<0x6D:
-		return "c"+str(v-0x20)
+	# return ("r%02X"%(v))
+	if v<0x8:
+		return ("o%X"%(v))
+	# elif v<0x6D:
+		# return "c"+str(v-0x20)
 	else:
-		return "r"+str(v-0x6D)
+		return ("r%02X"%(v))
 
 def getRegisterName(v):
 	return ("r%02X"%(v))
@@ -151,44 +163,65 @@ def parseComponentSwizzle(v):
 		out+=comp[(v>>((3-i)*2))&0x3]
 	return out
 
-def parseInstFormat1(v):
+def parseInstFormat1(k, v, lt={}):
 	return {"opcode" : v>>26,
 			# "src2"   : (v>>5)&0x7F,
 			"src2"   : (v>>7)&0x1F,
 			# "src1"   : (v>>12)&0x7F,
-			"src1"   : (v>>12)&0xFF,
+			"src1"   : (v>>12)&0x7F,
 			# "dst"    : (v>>19)&0x7F,
+			"flag"    : (v>>19)&0x3,
 			"dst"    : (v>>21)&0x1F,
 			# "extid"  : (v)&0x1F}
 			"extid"  : (v)&0x7F}
 
-def parseInstFormat2(v):
-	return {"opcode" : v>>26,
+def parseInstFormat2(k, v, lt={}):
+	ret={"opcode" : v>>26,
 			"addr"   : (v>>8)&0x3FFC,
 			"flags"  : (v>>22)&0x3F,
 			"ret"    : (v)&0x3FF}
+	if ret["opcode"]==0x28: #IF?
+		for i in range(k+4,ret["addr"],4):
+			indentLine(i)
+		for i in range(ret["addr"],ret["addr"]+ret["ret"]*4,4):
+			indentLine(i)
+		if ret["ret"]>0:
+			lt[ret["addr"]]=(-1,"ELSE")
+	return ret
+
 #?
-def parseInstFormat3(v):
+def parseInstFormat3(k, v, lt={}):
 	return {"opcode" : v>>26,
 			"src2"   : (v>>0)&0x7F,
 			"src1"   : (v>>7)&0x7F,
 			"dst"    : (v>>14)&0x7F}
 # MOV?
-def parseInstFormat4(v):
+def parseInstFormat4(k, v, lt={}):
 	return {"opcode" : v>>26,
 			"src1"   : (v>>7)&0x7F,
 			"dst"    : (v>>14)&0x7F,
 			"extid"    : (v)&0x3F}
 # CONDJUMP
-def parseInstFormat5(v):
-	return {"opcode" : v>>26,
+def parseInstFormat5(k, v, lt={}):
+	ret={"opcode" : v>>26,
 			"addr"   : (v>>8)&0x3FFC,
 			"bool"  : (v>>22)&0xF,
 			"ret"    : (v)&0x3FF}
+	if ret["opcode"]==0x27: #IFU
+		for i in range(k+4,ret["addr"],4):
+			indentLine(i)
+		for i in range(ret["addr"],ret["addr"]+ret["ret"]*4,4):
+			indentLine(i)
+		if ret["ret"]>0:
+			lt[ret["addr"]]=(-1,"ELSE")
+	return ret
 
-def outputStringList(strl, fmtl):
+def outputStringList(k, strl, fmtl):
 	l=len(strl)
-	out=""
+	if k in lineIndentLevel and lineIndentLevel[k]>0:
+		out="	"*lineIndentLevel[k]
+	else:
+		out=""
 	if l==len(fmtl):
 		for i in range(l):
 			str=strl[i]
@@ -201,10 +234,10 @@ def outputStringList(strl, fmtl):
 	iprint(out)
 
 
-def printInstFormat1(n, inst, e, lt, vt, ut, ot):
+def printInstFormat1(k, n, inst, e, lt, vt, ut, ot):
 	ext=e[inst["extid"]][0]
 	extd=parseExt(ext)
-	outputStringList([n,
+	outputStringList(k, [n,
 					# getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
 					getRegisterNameDST(inst["dst"])+"."+extd["dstcomp"],
 					" <- ",
@@ -213,13 +246,13 @@ def printInstFormat1(n, inst, e, lt, vt, ut, ot):
 					" , ",
 					# getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"])),
 					getRegisterNameSRC2(inst["src2"])+"."+(parseComponentSwizzle(extd["src2"])),
-					" ("+hex(inst["extid"])+")"],
+					" ("+hex(inst["extid"])+" "+bin(inst["flag"])+")"],
 					[8, 16, None, 16, None, 16, None])
 
-def printInstFormat4(n, inst, e, lt, vt, ut, ot):
+def printInstFormat4(k, n, inst, e, lt, vt, ut, ot):
 	ext=e[inst["extid"]][0]
 	extd=parseExt(ext)
-	outputStringList([n,
+	outputStringList(k, [n,
 					# getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
 					getRegisterNameDST(inst["dst"])+"."+extd["dstcomp"],
 					" <- ",
@@ -229,14 +262,15 @@ def printInstFormat4(n, inst, e, lt, vt, ut, ot):
 					" ("+hex(inst["extid"])+")"],
 					[8, 16, None, 16, None, 16, None])
 
-def printInstFormat2(n, inst, e, lt, vt, ut, ot):
-	iprint(n + " "*(7-len(n)) +
-			getLabelSymbol(inst["addr"], lt)+
-			" ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")")
+def printInstFormat2(k, n, inst, e, lt, vt, ut, ot):
+	outputStringList(k, [n,
+					getLabelSymbol(inst["addr"], lt),
+					" ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")"],
+					[8, 16, 16])
 
 # CONDJUMP
-def printInstFormat5(n, inst, e, lt, vt, ut, ot):
-	outputStringList([n,
+def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
+	outputStringList(k, [n,
 					getLabelSymbol(inst["addr"], lt),
 					" ,  ",
 					getInputSymbol((inst['bool']&0xF)+0x88, vt[2], ut),
@@ -255,8 +289,8 @@ instList[0x08]={"name" : "MUL", "format" : 0}
 instList[0x09]={"name" : "MAX", "format" : 0}
 instList[0x0A]={"name" : "MIN", "format" : 0}
 instList[0x13]={"name" : "MOV", "format" : 3}
-instList[0x24]={"name" : "CALL", "format" : 1}
-instList[0x25]={"name" : "CALL", "format" : 1}
+instList[0x24]={"name" : "CALL1", "format" : 1}
+instList[0x25]={"name" : "CALL2", "format" : 1}
 instList[0x26]={"name" : "CALLC", "format" : 4} #conditional call (uniform bool)
 instList[0x27]={"name" : "IFU", "format" : 4} #conditional jump (uniform bool)
 instList[0x2e]={"name" : "CMP?", "format" : 0}
@@ -269,18 +303,20 @@ def parseCode(data, e, lt, vt, ut, ot):
 
 		if k in lt:
 			iprint("%08x [--------] "%(k), True)
-			iprint(lt[k][1]+":")
+			unindentLine(k)
+			outputStringList(k, [lt[k][1]+":"], [8])
+			indentLine(k)
 
 		iprint("%08x [%08x]	"%(k,v), True)
 
 		if opcode in instList:
 			fmt=instList[opcode]["format"]
-			inst=fmtList[fmt][0](v)
-			fmtList[fmt][1](instList[opcode]["name"], inst, e, lt, vt, ut, ot)
+			inst=fmtList[fmt][0](k, v, lt)
+			fmtList[fmt][1](k, instList[opcode]["name"], inst, e, lt, vt, ut, ot)
 		elif opcode==0x21:
-			iprint("END")
+			outputStringList(k,["END"],[8])
 		elif opcode==0x22:
-			iprint("FLUSH")
+			outputStringList(k,["FLUSH"],[8])
 		# elif opcode==0x2e:
 		# 	inst=parseInstFormat1(v)
 		# 	ext=e[inst["extid"]][0]
@@ -291,12 +327,15 @@ def parseCode(data, e, lt, vt, ut, ot):
 		# 	       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
 		# 		" ("+hex(inst["extid"])+", src2: "+hex(inst["src2"])+")")
 		elif  opcode==0x28:
-			inst=parseInstFormat2(v)
+			inst=parseInstFormat2(k, v, lt)
 			addr=inst["addr"]
-			iprint("IF?    "+getLabelSymbol(inst["addr"], lt)+
-			       " ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+" "+hex(inst['flags'])+")")
+			outputStringList(k,
+					["IF?",
+					getLabelSymbol(inst["addr"], lt),
+			        "("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+" "+hex(inst['flags'])+")"],
+			        [8,16,16])
 		elif opcode==0x2A:
-			inst=parseInstFormat1(v)
+			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
 			iprint("EMITV? "+
@@ -307,7 +346,7 @@ def parseCode(data, e, lt, vt, ut, ot):
 			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+")")
 		elif opcode==0x2D:
-			inst=parseInstFormat1(v)
+			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
 			iprint("SUB?   "+
@@ -318,30 +357,32 @@ def parseCode(data, e, lt, vt, ut, ot):
 			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
 			       " ("+hex(inst["extid"])+")")
 		else:
-			inst=parseInstFormat1(v)
+			inst=parseInstFormat1(k, v)
 			if inst["extid"] < len(e):
 				ext=e[inst["extid"]][0]
 				extd=parseExt(ext)
-				outputStringList(["???",
-					# getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
-					getRegisterNameDST(inst["dst"])+"."+extd["dstcomp"],
-					" <- ",
-					# getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"])),
-					getRegisterNameSRC1(inst["src1"])+"."+(parseComponentSwizzle(extd["src1"])),
-					" , ",
-					# getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"])),
-					getRegisterNameSRC2(inst["src2"])+"."+(parseComponentSwizzle(extd["src2"])),
-					" ("+hex(inst["extid"])+")"],
-					[8, 16, None, 16, None, 16, None])
+				# outputStringList(["???",
+				# 	# getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
+				# 	getRegisterNameDST(inst["dst"])+"."+extd["dstcomp"],
+				# 	" <- ",
+				# 	# getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"])),
+				# 	getRegisterNameSRC1(inst["src1"])+"."+(parseComponentSwizzle(extd["src1"])),
+				# 	" , ",
+				# 	# getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"])),
+				# 	getRegisterNameSRC2(inst["src2"])+"."+(parseComponentSwizzle(extd["src2"])),
+				# 	" ("+hex(inst["extid"])+")"],
+				# 	[8, 16, None, 16, None, 16, None])
+				printInstFormat1(k, "???", inst, e, lt, vt, ut, ot)
 			else:
-				inst=parseInstFormat3(v)
-				iprint("???    "+
-				       getOutputSymbol(inst["dst"], ot)+
-				       "   <-	"+
-				       getInputSymbol(inst["src1"], vt[0], ut)+
-				       "   .   "+
-				       getInputSymbol(inst["src2"], vt[1], ut)+
-				       " (invalid extension id)")
+				inst=parseInstFormat3(k, v)
+				outputStringList(k,["???",
+								       getOutputSymbol(inst["dst"], ot),
+								       " <- ",
+								       getInputSymbol(inst["src1"], vt[0], ut),
+								       " , ",
+								       getInputSymbol(inst["src2"], vt[1], ut),
+								       "(invalid extension id)"],
+								    [8, 16, None, 16, None, 16, None])
 
 		k+=0x4
 
@@ -424,11 +465,13 @@ def parseConstTable(data, sym):
 	return out
 
 outputTypes={0x0 : "result.position",
+			0x1 : "result.normal?", #maybe
 			0x2 : "result.color",
 			0x3 : "result.texcoord0",
 			0x5 : "result.texcoord1",
 			0x6 : "result.texcoord2",
-			0x8 : "result.view"}
+			0x8 : "result.view" #"result.view" seems to be pre-projmatrix vertex coordinates
+			}
 
 def parseOutputTable(data, sym):
 	l=len(data)
@@ -457,6 +500,8 @@ def parseDVLE(data,dvlp, k):
 	shaderType=getWord(data, 0x6, 1)
 	mainStart=getWord(data, 0x8)*4
 	mainEnd=getWord(data, 0xC)*4
+
+	lineIndentLevel={}
 
 	iprint("vertex shader" if shaderType==0x0 else "geometry shader")
 	iprint("main : "+hex(mainStart)+"-"+hex(mainEnd))
