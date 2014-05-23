@@ -324,27 +324,41 @@ def parseCode(data, e, lt, vt, ut, ot):
 		elif  opcode==0x28:
 			inst=parseInstFormat2(k, v, lt)
 			addr=inst["addr"]
+			cond=""
+			op1=""
+			op2=""
+			#EXPERIMENT, PROBABLY WRONG
+			if inst["flags"]&0x4!=0x0:
+				op2="op.y>=0"
+			else:
+				op2="op.y<=0"
+			if inst["flags"]&0x8!=0x0:
+				op1="op.x>=0"
+			else:
+				op1="op.x<=0"
+			if inst['flags']&0x3==0x0:
+				cond=op1+" || "+op2
+			elif inst['flags']&0x3==0x1:
+				cond=op1+" && "+op2
+			elif inst['flags']&0x3==0x2:
+				cond=op1
+			elif inst['flags']&0x3==0x3:
+				cond=op2
 			outputStringList(k,
 					["IF?",
 					getLabelSymbol(inst["addr"], lt),
-			        "("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+" "+hex(inst['flags'])+")"],
+			        "("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+" "+cond+")"],
 			        [8,16,16])
 		elif opcode==0x2A:
 			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
-			printInstFormat1(k, "EMITV?", inst, e, lt, vt, ut, ot)
+			# printInstFormat1(k, "EMITV?", inst, e, lt, vt, ut, ot)
+			outputStringList(k,["EMITV?"],[8])
 		elif opcode==0x2D:
 			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
-			# iprint("SUB?   "+
-			#        getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			#        "   <-	"+
-			#        getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			#        "   .   "+
-			#        getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			#        " ("+hex(inst["extid"])+")")
 			printInstFormat1(k, "SUB?", inst, e, lt, vt, ut, ot)
 		else:
 			inst=parseInstFormat1(k, v)
