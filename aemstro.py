@@ -169,14 +169,10 @@ def parseComponentSwizzle(v):
 
 def parseInstFormat1(k, v, lt={}):
 	return {"opcode" : v>>26,
-			# "src2"   : (v>>5)&0x7F,
 			"src2"   : (v>>7)&0x1F,
-			# "src1"   : (v>>12)&0x7F,
 			"src1"   : (v>>12)&0x7F,
-			# "dst"    : (v>>19)&0x7F,
 			"flag"    : (v>>19)&0x3,
 			"dst"    : (v>>21)&0x1F,
-			# "extid"  : (v)&0x1F}
 			"extid"  : (v)&0x7F}
 
 def parseInstFormat2(k, v, lt={}):
@@ -283,17 +279,17 @@ def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 					[8, 16, None, 16, None, 16, None])
 
 instList={}
-# fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat4, printInstFormat4)]
 fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5)]
 
 instList[0x00]={"name" : "ADD", "format" : 0}
 instList[0x01]={"name" : "DP3", "format" : 0}
 instList[0x02]={"name" : "DP4", "format" : 0}
 instList[0x08]={"name" : "MUL", "format" : 0}
-instList[0x09]={"name" : "MAX", "format" : 0}
-instList[0x0A]={"name" : "MIN", "format" : 0}
-instList[0x0E]={"name" : "RCP", "format" : 0} #1/op1
-instList[0x0F]={"name" : "RSQ", "format" : 0} #1/sqrt(op1)
+instList[0x0B]={"name" : "SIN?", "format" : 3} #maybe COS ?
+instList[0x0C]={"name" : "MAX", "format" : 0} #definitely
+instList[0x0D]={"name" : "MIN", "format" : 0} #definitely
+instList[0x0E]={"name" : "RCP", "format" : 3} #1/op1
+instList[0x0F]={"name" : "RSQ", "format" : 3} #1/sqrt(op1)
 instList[0x13]={"name" : "MOV", "format" : 3}
 instList[0x24]={"name" : "CALL1", "format" : 1} #CALL1 is probably just a regular old CALL
 instList[0x25]={"name" : "CALL2", "format" : 1} #CALL2 is probably conditional (to CALLC what IF? is to IFU)
@@ -309,7 +305,7 @@ def parseCode(data, e, lt, vt, ut, ot):
 		opcode=v>>26
 
 		if k in lt:
-			iprint("%08x [--------] "%(k), True)
+			iprint("%08x [--------]	"%(k), True)
 			unindentLine(k)
 			outputStringList(k, [lt[k][1]+":"], [8])
 			indentLine(k)
@@ -325,15 +321,6 @@ def parseCode(data, e, lt, vt, ut, ot):
 			outputStringList(k,["RET"],[8])
 		elif opcode==0x22:
 			outputStringList(k,["FLUSH"],[8])
-		# elif opcode==0x2e:
-		# 	inst=parseInstFormat1(v)
-		# 	ext=e[inst["extid"]][0]
-		# 	extd=parseExt(ext)
-		# 	iprint("CMP?   "+
-		# 	       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-		# 	       "   <-	"+
-		# 	       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-		# 		" ("+hex(inst["extid"])+", src2: "+hex(inst["src2"])+")")
 		elif  opcode==0x28:
 			inst=parseInstFormat2(k, v, lt)
 			addr=inst["addr"]
@@ -346,42 +333,24 @@ def parseCode(data, e, lt, vt, ut, ot):
 			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
-			# outputStringList(k,
-			# 		["EMITV? ",
-			# 	       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
-			# 	       " <- ",
-			# 	       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"])),
-			# 	       " , ",
-			# 	       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"])),
-			# 	       " ("+hex(inst["extid"])+")"])
 			printInstFormat1(k, "EMITV?", inst, e, lt, vt, ut, ot)
 		elif opcode==0x2D:
 			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
 			extd=parseExt(ext)
-			iprint("SUB?   "+
-			       getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
-			       "   <-	"+
-			       getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
-			       "   .   "+
-			       getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
-			       " ("+hex(inst["extid"])+")")
+			# iprint("SUB?   "+
+			#        getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"]+
+			#        "   <-	"+
+			#        getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"]))+
+			#        "   .   "+
+			#        getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"]))+
+			#        " ("+hex(inst["extid"])+")")
+			printInstFormat1(k, "SUB?", inst, e, lt, vt, ut, ot)
 		else:
 			inst=parseInstFormat1(k, v)
 			if inst["extid"] < len(e):
 				ext=e[inst["extid"]][0]
 				extd=parseExt(ext)
-				# outputStringList(["???",
-				# 	# getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
-				# 	getRegisterNameDST(inst["dst"])+"."+extd["dstcomp"],
-				# 	" <- ",
-				# 	# getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"])),
-				# 	getRegisterNameSRC1(inst["src1"])+"."+(parseComponentSwizzle(extd["src1"])),
-				# 	" , ",
-				# 	# getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"])),
-				# 	getRegisterNameSRC2(inst["src2"])+"."+(parseComponentSwizzle(extd["src2"])),
-				# 	" ("+hex(inst["extid"])+")"],
-				# 	[8, 16, None, 16, None, 16, None])
 				printInstFormat1(k, "???%02X"%(inst["opcode"]), inst, e, lt, vt, ut, ot)
 			else:
 				inst=parseInstFormat3(k, v)
@@ -475,12 +444,13 @@ def parseConstTable(data, sym):
 	return out
 
 outputTypes={0x0 : "result.position",
-			0x1 : "result.normal?", #maybe
+			0x1 : "result.normalquat?", #maybe
 			0x2 : "result.color",
 			0x3 : "result.texcoord0",
 			0x5 : "result.texcoord1",
 			0x6 : "result.texcoord2",
-			0x8 : "result.view" #"result.view" seems to be pre-projmatrix vertex coordinates
+			0x8 : "result.view", #"result.view" seems to be pre-projmatrix vertex coordinates
+			0x9 : "result.normal", #maybe
 			}
 
 def parseOutputTable(data, sym):
