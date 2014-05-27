@@ -24,6 +24,7 @@ class DVLE(object):
 		self._type = type
 		self._const = []
 		self._label = []
+		self._labelmap = {}
 		self._outmap = []
 		self._inmap = []
 		self._symbol = bytearray()
@@ -57,6 +58,13 @@ class DVLE(object):
 		elif label[1]=="endmain":
 			self.setEndmain(label[0])
 		self._label.append((label[0],self.addSymbol(label[1])))
+		self._labelmap[label[1]]=label[0]
+
+	def getLabelAddress(self, label):
+		if label in self._labelmap:
+			return self._labelmap[label]
+		else:
+			return 0x0
 
 	#binary word tuple
 	def addOutput(self, out):
@@ -127,6 +135,9 @@ class DVLP(object):
 	def __init__(self):
 		self._code = []
 		self._opdesc = []
+
+	def clearCode(self):
+		self._code[:] = []
 
 	def addInstruction(self, inst):
 		self._code.append(inst)
@@ -216,7 +227,7 @@ def getRegisterFromName(s):
 def assembleFormat1(d):
 	return (d["opcode"]<<26)|((d["dst"]&0x1F)<<21)|((d["src1"]&0x7F)<<12)|((d["src2"]&0x1F)<<7)|(d["extid"]&0x7F)
 
-def parseFormat1(s):
+def parseFormat1(dvle, s):
 	operandFmt="[^\s,]*"
 	descFmt="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
 	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+"),\s*("+operandFmt+") \(("+descFmt+")\)")
@@ -229,10 +240,27 @@ def parseFormat1(s):
 	else:
 		raise Exception("encountered error while parsing instruction")
 
+def assembleFormat2(d):
+	print(d)
+	return (d["opcode"]<<26)|((d["flags"]&0xF)<<22)|((d["addr"]&0xFFF)<<10)|(d["ret"]&0x3FF)
+
+def parseFormat2(dvle, s):
+	operandFmt1="[^\s,]*"
+	operandFmt2="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
+	operandFmt3="0b[0-1]+"
+	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt2+"),\s*("+operandFmt3+")")
+	r=p.match(s)
+	if r:
+		return {"addr" : dvle.getLabelAddress(r.group(1)),
+			"ret" : int(r.group(2),0),
+			"flags" : int(r.group(3),0)}
+	else:
+		raise Exception("encountered error while parsing instruction")
+
 def assembleFormat3(d):
 	return (d["opcode"]<<26)
 
-def parseFormat3(s):
+def parseFormat3(dvle, s):
 	# doesn't check that there are no operands.
 	# (but really if you want to be an idiot and add useless operands to your code, go ahead)
 	return {}
@@ -240,7 +268,7 @@ def parseFormat3(s):
 def assembleFormat4(d):
 	return (d["opcode"]<<26)|((d["dst"]&0x1F)<<21)|((d["src1"]&0x7F)<<12)|(d["extid"]&0x7F)
 
-def parseFormat4(s):
+def parseFormat4(dvle, s):
 	operandFmt="[^\s,]*"
 	descFmt="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
 	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+") \(("+descFmt+")\)")
@@ -253,7 +281,7 @@ def parseFormat4(s):
 		raise Exception("encountered error while parsing instruction")
 
 instList={}
-fmtList=[(parseFormat1, assembleFormat1), None, (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4)]
+fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4)]
 
 instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
@@ -262,8 +290,9 @@ instList["mul"]={"opcode" : 0x08, "format" : 0}
 instList["max"]={"opcode" : 0x09, "format" : 0}
 instList["min"]={"opcode" : 0x0A, "format" : 0}
 instList["mov"]={"opcode" : 0x13, "format" : 3}
-instList["flush"]={"opcode" : 0x22, "format" : 2}
 instList["end"]={"opcode" : 0x21, "format" : 2}
+instList["flush"]={"opcode" : 0x22, "format" : 2}
+instList["if"]={"opcode" : 0x28, "format" : 1}
 
 def parseConst(dvlp, dvle, s):
 	s=s.split(",")
@@ -316,7 +345,7 @@ dirList["out"]=(parseOut)
 dirList["opdesc"]=(parseOpdesc)
 dirList["uniform"]=(parseUniform)
 
-def parseInstruction(s):
+def parseInstruction(dvle, s):
 	s=s.lower()
 	p=re.compile("^\s*([^\s]*)(.*)")
 	r=p.match(s)
@@ -324,7 +353,7 @@ def parseInstruction(s):
 		name=r.group(1)
 		if name in instList:
 			fmt=instList[name]["format"]
-			out=fmtList[fmt][0](r.group(2))
+			out=fmtList[fmt][0](dvle, r.group(2))
 			out["opcode"]=instList[name]["opcode"]
 			v=fmtList[fmt][1](out)
 			return v
@@ -340,7 +369,7 @@ def parseLabel(s):
 		return r.group(1)
 	return None
 
-def parseLine(dvlp, dvle, l):
+def parseLine(dvlp, dvle, l, mode):
 	l=l.split(";")[0] #remove comments
 
 	k=0
@@ -350,20 +379,22 @@ def parseLine(dvlp, dvle, l):
 
 	if len(l)>1:
 		if l[0]==".": #directive
-			p=re.compile("^\s*\.([^\s]*)(.*)")
-			r=p.match(l)
-			if r:
-				name=r.group(1)
-				if name in dirList:
-					dirList[name](dvlp, dvle, r.group(2))
-				else:
-					print(name+" : no such directive")
+			if not(mode):
+				p=re.compile("^\s*\.([^\s]*)(.*)")
+				r=p.match(l)
+				if r:
+					name=r.group(1)
+					if name in dirList:
+						dirList[name](dvlp, dvle, r.group(2))
+					else:
+						print(name+" : no such directive")
 		else:
 			v=parseLabel(l)
 			if v: #label
-				dvle.addLabel((dvlp.getCodelength(), v))
+				if not(mode):
+					dvle.addLabel((dvlp.getCodelength(), v))
 			else: #instruction
-				v=parseInstruction(l)
+				v=parseInstruction(dvle, l)
 				if v:
 					dvlp.addInstruction(v)
 
@@ -376,7 +407,11 @@ else:
 
 	with open(sys.argv[1], "r") as f:
 		for line in f:
-			parseLine(dvlb.getDVLP(), dvle, line)
+			parseLine(dvlb.getDVLP(), dvle, line, False)
+	dvlb.getDVLP().clearCode()
+	with open(sys.argv[1], "r") as f:
+		for line in f:
+			parseLine(dvlb.getDVLP(), dvle, line, True)
 
 	dvlb.addDVLE(dvle)
 
