@@ -281,7 +281,7 @@ def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 instList={}
 fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5)]
 
-instList[0x00]={"name" : "ADD", "format" : 0}
+instList[0x00]={"name" : "ADD", "format" : 0} #really SUB ?
 instList[0x01]={"name" : "DP3", "format" : 0}
 instList[0x02]={"name" : "DP4", "format" : 0}
 instList[0x08]={"name" : "MUL", "format" : 0}
