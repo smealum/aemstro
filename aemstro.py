@@ -351,10 +351,13 @@ def parseCode(data, e, lt, vt, ut, ot):
 			        [8,16,16])
 		elif opcode==0x2A:
 			inst=parseInstFormat1(k, v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			# printInstFormat1(k, "EMITV?", inst, e, lt, vt, ut, ot)
-			outputStringList(k,["EMITV?"],[8])
+			outputStringList(k,["ENDEMIT"],[10])
+		elif opcode==0x2B:
+			inst=parseInstFormat1(k, v)
+			if v&~0xFFC00000 != 0x0:
+				raise Exception("nope : "+hex((v&~0xFFC00000)))
+			val = (v&~0xFC000000)>>22
+			outputStringList(k,["STARTEMIT",hex(val),hex(val&0x3),hex((val>>2)&0x3)],[10,8,8,8])
 		elif opcode==0x2D:
 			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
