@@ -195,6 +195,12 @@ def parseInstFormat3(k, v, lt={}):
 			"src2"   : (v>>0)&0x7F,
 			"src1"   : (v>>7)&0x7F,
 			"dst"    : (v>>14)&0x7F}
+
+#?
+def parseInstFormat6(k, v, lt={}):
+	return {"opcode" : v>>26,
+			"vtxid"   : (v>>22)&0x3,
+			"primid"   : (v>>24)&0x3}
 # MOV?
 def parseInstFormat4(k, v, lt={}):
 	return {"opcode" : v>>26,
@@ -261,6 +267,13 @@ def printInstFormat4(k, n, inst, e, lt, vt, ut, ot):
 					"   ", "",
 					" ("+hex(inst["extid"])+")"],
 					[8, 16, None, 16, None, 16, None])
+
+def printInstFormat6(k, n, inst, e, lt, vt, ut, ot):
+	outputStringList(k, [n,
+					hex(inst["primid"]),
+					",",
+					hex(inst["vtxid"])],
+					[8, 16, None, 16])
 
 def printInstFormat2(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
@@ -351,13 +364,10 @@ def parseCode(data, e, lt, vt, ut, ot):
 			        [8,16,16])
 		elif opcode==0x2A:
 			inst=parseInstFormat1(k, v)
-			outputStringList(k,["ENDEMIT"],[10])
+			outputStringList(k,["EMITVERTEX"],[10])
 		elif opcode==0x2B:
-			inst=parseInstFormat1(k, v)
-			if v&~0xFFC00000 != 0x0:
-				raise Exception("nope : "+hex((v&~0xFFC00000)))
-			val = (v&~0xFC000000)>>22
-			outputStringList(k,["STARTEMIT",hex(val),hex(val&0x3),hex((val>>2)&0x3)],[10,8,8,8])
+			inst=parseInstFormat6(k, v)
+			printInstFormat6(k, "SETEMIT", inst, e, lt, vt, ut, ot)
 		elif opcode==0x2D:
 			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
