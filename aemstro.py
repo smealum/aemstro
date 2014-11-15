@@ -69,6 +69,12 @@ def parseExtTable(data):
 		out+=[(getWord(data, i), getWord(data, i+0x4))]
 	return out
 
+def getRegisterNameSRC(v):
+	if v<0x88:
+		return getRegisterNameSRC1(v)
+	else:
+		return "b"+str(v-0x88)
+
 def getRegisterNameSRC1(v):
 	if v<0x10:
 		return "v"+str(v&0xF)
@@ -106,19 +112,19 @@ def getRegisterName(v):
 	# else:
 	# 	return "b"+str(v-0x88)
 
-def getValue(v, t):
-	return t[v] if v in t else getRegisterName(v)
 
 def getInputSymbol(v, vt, ut):
-	if v in vt:
-		return vt[v]
-	elif v in ut:
-		return "("+",".join(["%.2f"%k for k in ut[v]])+")"
+	src=getRegisterNameSRC(v)
+	if src in vt:
+		return vt[src]
+	if src in ut:
+		return ut[src]
 	else:
-		return getValue(v, input)
+		return src
 
 def getOutputSymbol(v, ot):
-	return getValue(v, ot)
+	dst=getRegisterNameDST(v)
+	return ot[dst] if dst in ot else dst
 
 def getLabelSymbol(v, t):
 	return t[v][1] if v in t else hex(v)
@@ -189,9 +195,9 @@ def parseInstFormat2(k, v, lt={}):
 #?
 def parseInstFormat3(k, v, lt={}):
 	return {"opcode" : v>>26,
-			"src2"   : (v>>0)&0x7F,
+			"src2"   : (v>>0)&0x1F,
 			"src1"   : (v>>7)&0x7F,
-			"dst"    : (v>>14)&0x7F}
+			"dst"    : (v>>14)&0x1F}
 
 #?
 def parseInstFormat6(k, v, lt={}):
@@ -202,7 +208,7 @@ def parseInstFormat6(k, v, lt={}):
 def parseInstFormat4(k, v, lt={}):
 	return {"opcode" : v>>26,
 			"src1"   : (v>>7)&0x7F,
-			"dst"    : (v>>14)&0x7F,
+			"dst"    : (v>>14)&0x1F,
 			"extid"    : (v)&0x3F}
 # CONDJUMP
 def parseInstFormat5(k, v, lt={}):
@@ -241,29 +247,24 @@ def printInstFormat1(k, n, inst, e, lt, vt, ut, ot):
 	ext=e[inst["extid"]][0]
 	extd=parseExt(ext)
 	outputStringList(k, [n,
-					# getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
-					getRegisterNameDST(inst["dst"])+"."+extd["dstcomp"],
+					getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
 					" <- ",
-					# getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"])),
-					getRegisterNameSRC1(inst["src1"])+"."+(parseComponentSwizzle(extd["src1"])),
+					getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"])),
 					" , ",
-					# getInputSymbol(inst["src2"], vt[1], ut)+"."+(parseComponentSwizzle(extd["src2"])),
-					getRegisterNameSRC2(inst["src2"])+"."+(parseComponentSwizzle(extd["src2"])),
+					getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"])),
 					" ("+hex(inst["extid"])+" "+bin(inst["flag"])+")"],
-					[8, 16, None, 16, None, 16, None])
+					[8, 32, None, 32, None, 32, None])
 
 def printInstFormat4(k, n, inst, e, lt, vt, ut, ot):
 	ext=e[inst["extid"]][0]
 	extd=parseExt(ext)
 	outputStringList(k, [n,
-					# getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
-					getRegisterNameDST(inst["dst"])+"."+extd["dstcomp"],
+					getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
 					" <- ",
-					# getInputSymbol(inst["src1"], vt[0], ut)+"."+(parseComponentSwizzle(extd["src1"])),
-					getRegisterNameSRC1(inst["src1"])+"."+(parseComponentSwizzle(extd["src1"])),
+					getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"])),
 					"   ", "",
 					" ("+hex(inst["extid"])+")"],
-					[8, 16, None, 16, None, 16, None])
+					[8, 32, None, 32, None, 32, None])
 
 def printInstFormat6(k, n, inst, e, lt, vt, ut, ot):
 	if inst["primid"]==0x0:
@@ -271,7 +272,7 @@ def printInstFormat6(k, n, inst, e, lt, vt, ut, ot):
 						"vtx%02X" % inst["vtxid"]],
 						[8, 8])
 	else:
-		prim=["","TRIANGLE_STRIP","TRIANGLE","TRIANGLE_FAN"]
+		prim=["","TRIANGLE_FAN","TRIANGLE","TRIANGLE_STRIP"]
 		outputStringList(k, [n,
 						"vtx%02X," % inst["vtxid"],
 						prim[inst["primid"]]],
@@ -281,14 +282,14 @@ def printInstFormat2(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
 					getLabelSymbol(inst["addr"], lt),
 					" ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")"],
-					[8, 16, 16])
+					[8, 32, 32])
 
 # CONDJUMP
 def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
 					getLabelSymbol(inst["addr"], lt),
 					" ,  ",
-					getInputSymbol((inst['bool']&0xF)+0x88, vt[2], ut),
+					getInputSymbol((inst['bool']&0xF)+0x88, vt, ut),
 					"   ", "",
 					" ("+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
 					[8, 16, None, 16, None, 16, None])
@@ -384,9 +385,9 @@ def parseCode(data, e, lt, vt, ut, ot):
 				outputStringList(k,["???%02X"%(inst["opcode"]),
 								       getOutputSymbol(inst["dst"], ot),
 								       " <- ",
-								       getInputSymbol(inst["src1"], vt[0], ut),
+								       getInputSymbol(inst["src1"], vt, ut),
 								       " , ",
-								       getInputSymbol(inst["src2"], vt[1], ut),
+								       getInputSymbol(inst["src2"], vt, ut),
 								       "(invalid extension id)"],
 								    [8, 16, None, 16, None, 16, None])
 
@@ -411,24 +412,16 @@ def parseLabelTable(data, sym):
 		out[loc]=(id,parseSymbol(sym,off))
 	return out
 
-#dirty, waiting to find real transform
 def transformRegisterValue(v):
 	if v<16:
 		return (v&0xF)
-	# elif v<120:
-	# 	return v+16
-	# else:
-	# 	return -1
 	return v+16
-
 
 def parseVarTable(data, sym):
 	l=len(data)
 	iprint("Uniforms :")
 	indentOut()
-	src1={}
-	src2={}
-	srcb={}
+	src={}
 	for i in range(0,l,0x8):
 		off=getWord(data,i)
 		v1=getWord(data,i+4,2)
@@ -437,21 +430,14 @@ def parseVarTable(data, sym):
 		base=transformRegisterValue(v1)
 		end=transformRegisterValue(v2)
 
-		# iprint(getRegisterName(v1)+" - "+getRegisterName(v2)+" : "+parseSymbol(sym,off))
-		iprint(getRegisterNameSRC1(base)+" - "+getRegisterNameSRC1(end)+" : "+parseSymbol(sym,off))
+		iprint(getRegisterNameSRC(base)+" - "+getRegisterNameSRC(end)+" : "+parseSymbol(sym,off))
 		for k in range(base, end+1):
 			name=parseSymbol(sym,off)+"["+str(k-base)+"]"
-			if k<0x20:
-				src1[k/4]=name
-				src2[k]=name
-			# else:
-			# 	src1[k]=name
-			if k>=0x88:
-				srcb[k]=parseSymbol(sym,off)
+			src[getRegisterNameSRC(k)]=name
 
 	unindentOut()
 	print("")
-	return (src1,src2,srcb)
+	return src
 
 def parseConstTable(data, sym):
 	l=len(data)
@@ -459,12 +445,10 @@ def parseConstTable(data, sym):
 	indentOut()
 	out={}
 	for i in range(0,l,0x14):
-		# r=transformRegisterValue(getWord(data,i+2,2))
 		r=getWord(data,i+2,2)+0x20
 		vec=[convFloat24(getWord(data,i+k)) for k in range(4,0x14,4)]
-		# iprint(getRegisterName(r)+" = "+str(vec))
-		iprint(getRegisterNameSRC1(r)+" = "+str(vec))
-		out[r]=vec
+		iprint(getRegisterNameSRC(r)+" = "+str(vec))
+		out[getRegisterNameSRC(r)]="["+", ".join(["%4.2f"%(v) for v in vec])+"]"
 
 	unindentOut()
 	print("")
@@ -490,8 +474,10 @@ def parseOutputTable(data, sym):
 		v1=getWord(data,i,2)
 		v2=getWord(data,i+2,2)
 
+		dst=getRegisterNameDST(v2)
+
 		if v1 in outputTypes:
-			out[v2*4]=outputTypes[v1]
+			out[dst]=outputTypes[v1]
 
 		iprint("o"+str(v2)+" = "+(outputTypes[v1] if v1 in outputTypes else hex(v1))+" ("+hex(off)+")")
 
