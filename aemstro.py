@@ -70,33 +70,30 @@ def parseExtTable(data):
 	return out
 
 def getRegisterNameSRC1(v):
-	return ("r%02X"%(v))
-	if v<0x20:
+	if v<0x10:
 		return "v"+str(v&0xF)
-	else:
+	elif v<0x20:
+		return "r"+str(v-0x10)
+	elif v<0x80:
 		return "c"+str(v-0x20)
+	else:
+		return ("r%02X"%(v))
 
 def getRegisterNameSRC2(v):
-	return ("r%02X"%(v))
-	# if v<0x20:
-	# 	return "v"+str(v&0xF)
-	# elif v<0x6D:
-	# 	return "c"+str(v-0x20)
-	# else:
-	# 	return "r"+str(v-0x6D)
-	if v<0x20:
-		return "v"+str(int(v/4))
-	elif v<0x6D:
-		return "c"+str(v>>1)
+	if v<0x10:
+		return "v"+str(v&0xF)
+	elif v<0x20:
+		return "r"+str(v-0x10)
+	elif v<0x80:
+		return "c"+str(v-0x20)
 	else:
-		return "r"+str(v-0x6D)
+		return ("r%02X"%(v))
 
 def getRegisterNameDST(v):
-	# return ("r%02X"%(v))
-	if v<0x8:
+	if v<0x10:
 		return ("o%X"%(v))
-	# elif v<0x6D:
-		# return "c"+str(v-0x20)
+	elif v<0x20:
+		return "r"+str(v-0x10)
 	else:
 		return ("r%02X"%(v))
 

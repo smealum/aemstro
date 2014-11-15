@@ -211,15 +211,44 @@ class DVLB(object):
 		return retb2+retb
 
 
-def getRegisterFromName(s):
-	# if s[0]=="v":
-	# 	return int(s[1:])
-	# elif s[0]=="c":
-	# 	return int(s[1:])+16
-	# elif s[0]=="b":
-	# 	return int(s[1:])+120
-	# elif s[0]=="d": # direct hex; unambiguous
-	if s[0]=="d": # direct hex; unambiguous
+def getRegisterFromNameDst(s):
+	if s[0]=="o": # output
+		return int(s[1:])
+	elif s[0]=="v": # attribute
+		print("error : "+s+" cannot be accessed from dst")
+	elif s[0]=="r": # temporary register
+		return int(s[1:])+0x10
+	elif s[0]=="c": # uniform
+		print("error : "+s+" cannot be accessed from dst")
+	elif s[0]=="d": # direct hex; unambiguous
+		return int("0x"+s[1:],0)
+	else:
+		print("error : "+s+" is not a valid register name")
+
+def getRegisterFromNameSrc1(s):
+	if s[0]=="o": # output
+		print("error : "+s+" cannot be accessed from src1")
+	elif s[0]=="v": # attribute
+		return int(s[1:])
+	elif s[0]=="r": # temporary register
+		return int(s[1:])+0x10
+	elif s[0]=="c": # uniform
+		return int(s[1:])+0x20
+	elif s[0]=="d": # direct hex; unambiguous
+		return int("0x"+s[1:],0)
+	else:
+		print("error : "+s+" is not a valid register name")
+
+def getRegisterFromNameSrc2(s):
+	if s[0]=="o": # output
+		print("error : "+s+" cannot be accessed from src2")
+	elif s[0]=="v": # attribute
+		return int(s[1:])
+	elif s[0]=="r": # temporary register
+		return int(s[1:])+0x10
+	elif s[0]=="c": # uniform
+		print("error : "+s+" cannot be accessed from src2")
+	elif s[0]=="d": # direct hex; unambiguous
 		return int("0x"+s[1:],0)
 	else:
 		print("error : "+s+" is not a valid register name")
@@ -230,12 +259,12 @@ def assembleFormat1(d):
 def parseFormat1(dvle, s):
 	operandFmt="[^\s,]*"
 	descFmt="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
-	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+"),\s*("+operandFmt+") \(("+descFmt+")\)")
+	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+"),\s*("+operandFmt+")\s*\(("+descFmt+")\)")
 	r=p.match(s)
 	if r:
-		return {"dst" : getRegisterFromName(r.group(1)),
-			"src1" : getRegisterFromName(r.group(2)),
-			"src2" : getRegisterFromName(r.group(3)),
+		return {"dst" : getRegisterFromNameDst(r.group(1)),
+			"src1" : getRegisterFromNameSrc1(r.group(2)),
+			"src2" : getRegisterFromNameSrc2(r.group(3)),
 			"extid" : int(r.group(4),0)}
 	else:
 		raise Exception("encountered error while parsing instruction")
@@ -271,11 +300,11 @@ def assembleFormat4(d):
 def parseFormat4(dvle, s):
 	operandFmt="[^\s,]*"
 	descFmt="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
-	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+") \(("+descFmt+")\)")
+	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+")\s*\(("+descFmt+")\)")
 	r=p.match(s)
 	if r:
-		return {"dst" : getRegisterFromName(r.group(1)),
-			"src1" : getRegisterFromName(r.group(2)),
+		return {"dst" : getRegisterFromNameDst(r.group(1)),
+			"src1" : getRegisterFromNameSrc1(r.group(2)),
 			"extid" : int(r.group(3),0)}
 	else:
 		raise Exception("encountered error while parsing instruction")
