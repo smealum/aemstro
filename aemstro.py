@@ -199,8 +199,8 @@ def parseInstFormat3(k, v, lt={}):
 #?
 def parseInstFormat6(k, v, lt={}):
 	return {"opcode" : v>>26,
-			"vtxid"   : (v>>22)&0x3,
-			"primid"   : (v>>24)&0x3}
+			"vtxid"   : (v>>24)&0x3,
+			"primid"   : (v>>22)&0x3}
 # MOV?
 def parseInstFormat4(k, v, lt={}):
 	return {"opcode" : v>>26,
@@ -269,11 +269,16 @@ def printInstFormat4(k, n, inst, e, lt, vt, ut, ot):
 					[8, 16, None, 16, None, 16, None])
 
 def printInstFormat6(k, n, inst, e, lt, vt, ut, ot):
-	outputStringList(k, [n,
-					hex(inst["primid"]),
-					",",
-					hex(inst["vtxid"])],
-					[8, 16, None, 16])
+	if inst["primid"]==0x0:
+		outputStringList(k, [n,
+						"vtx%02X" % inst["vtxid"]],
+						[8, 8])
+	else:
+		prim=["","TRIANGLE_STRIP","TRIANGLE","TRIANGLE_FAN"]
+		outputStringList(k, [n,
+						"vtx%02X," % inst["vtxid"],
+						prim[inst["primid"]]],
+						[8, 8, 8])
 
 def printInstFormat2(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
@@ -292,7 +297,7 @@ def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 					[8, 16, None, 16, None, 16, None])
 
 instList={}
-fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5)]
+fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5), (parseInstFormat6, printInstFormat6)]
 
 instList[0x00]={"name" : "ADD", "format" : 0} #really SUB ?
 instList[0x01]={"name" : "DP3", "format" : 0}
@@ -308,6 +313,7 @@ instList[0x24]={"name" : "CALL1", "format" : 1} #CALL1 is probably just a regula
 instList[0x25]={"name" : "CALL2", "format" : 1} #CALL2 is probably conditional (to CALLC what IF? is to IFU)
 instList[0x26]={"name" : "CALLC", "format" : 4} #conditional call (uniform bool)
 instList[0x27]={"name" : "IFU", "format" : 4} #conditional jump (uniform bool)
+instList[0x2b]={"name" : "SETEMIT", "format" : 5}
 instList[0x2e]={"name" : "CMP1?", "format" : 0} #?
 instList[0x2f]={"name" : "CMP2?", "format" : 0} #?
 
@@ -365,9 +371,6 @@ def parseCode(data, e, lt, vt, ut, ot):
 		elif opcode==0x2A:
 			inst=parseInstFormat1(k, v)
 			outputStringList(k,["EMITVERTEX"],[10])
-		elif opcode==0x2B:
-			inst=parseInstFormat6(k, v)
-			printInstFormat6(k, "SETEMIT", inst, e, lt, vt, ut, ot)
 		elif opcode==0x2D:
 			inst=parseInstFormat1(k, v)
 			ext=e[inst["extid"]][0]
