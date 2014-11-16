@@ -284,8 +284,18 @@ def printInstFormat2(k, n, inst, e, lt, vt, ut, ot):
 					" ("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+")"],
 					[8, 32, 32])
 
-# CONDJUMP
+# CONDJUMP (uniform)
 def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
+	outputStringList(k, [n,
+					getLabelSymbol(inst["addr"], lt),
+					" ,  ",
+					getInputSymbol((inst['bool']&0xF)+0x88, vt, ut),
+					"   ", "",
+					" ("+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
+					[8, 16, None, 16, None, 16, None])
+
+# CONDJUMP (uniform, no else)
+def printInstFormat7(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
 					getLabelSymbol(inst["addr"], lt),
 					" ,  ",
@@ -309,9 +319,11 @@ instList[0x0F]={"name" : "RSQ", "format" : 3} #1/sqrt(op1)
 instList[0x13]={"name" : "MOV", "format" : 3}
 instList[0x24]={"name" : "CALL1", "format" : 1} #CALL1 is probably just a regular old CALL
 instList[0x25]={"name" : "CALL2", "format" : 1} #CALL2 is probably conditional (to CALLC what IF? is to IFU)
-instList[0x26]={"name" : "CALLC", "format" : 4} #conditional call (uniform bool)
-instList[0x27]={"name" : "IFU", "format" : 4} #conditional jump (uniform bool)
+instList[0x26]={"name" : "CALLU", "format" : 4} #conditional call (uniform bool)
+instList[0x27]={"name" : "IFU", "format" : 4} #if/else statement (uniform bool)
+instList[0x29]={"name" : "JMPU?", "format" : 4} #conditional jump ? (uniform bool)
 instList[0x2b]={"name" : "SETEMIT", "format" : 5}
+instList[0x2c]={"name" : "JMPC?", "format" : 1} #conditional jump ?
 instList[0x2e]={"name" : "CMP1?", "format" : 0} #?
 instList[0x2f]={"name" : "CMP2?", "format" : 0} #?
 
