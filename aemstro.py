@@ -113,14 +113,23 @@ def getRegisterName(v):
 	# 	return "b"+str(v-0x88)
 
 
-def getInputSymbol(v, vt, ut):
+def getInputSymbol(v, vt, ut, idx):
 	src=getRegisterNameSRC(v)
+	idxstr=""
+
+	if idx==1:
+		idxstr="[idx1]"
+	elif idx==2:
+		idxstr="[idx2]"
+	elif idx==3:
+		idxstr="[lcnt]"
+
 	if src in vt:
-		return vt[src]
+		return vt[src]+idxstr
 	if src in ut:
-		return ut[src]
+		return ut[src]+idxstr
 	else:
-		return src
+		return src+idxstr
 
 def getOutputSymbol(v, ot):
 	dst=getRegisterNameDST(v)
@@ -162,7 +171,8 @@ def parseExt(v):
 	return {"src1"    : (v>>5)&0xFF,
 			"src2"    : (v>>14)&0xFF,
 			"dst"     : (v)&0x1F,
-			"dstcomp" : parseComponentMask(v&0xF)}
+			"dstcomp" : parseComponentMask(v&0xF),
+			"rest" : (v>>22)}
  
 def parseComponentSwizzle(v):
 	out=""
@@ -174,7 +184,7 @@ def parseInstFormat1(k, v, lt={}):
 	return {"opcode" : v>>26,
 			"src2"   : (v>>7)&0x1F,
 			"src1"   : (v>>12)&0x7F,
-			"flag"    : (v>>19)&0x3,
+			"idx"    : (v>>19)&0x3,
 			"dst"    : (v>>21)&0x1F,
 			"extid"  : (v)&0x7F}
 
@@ -223,6 +233,9 @@ def parseInstFormat5(k, v, lt={}):
 			indentLine(i)
 		if ret["ret"]>0:
 			lt[ret["addr"]]=(-1,"ELSE_%X"%(k))
+	elif ret["opcode"]==0x29: #LOOP
+		for i in range(k+4,ret["addr"],4):
+			indentLine(i)
 	return ret
 
 def outputStringList(k, strl, fmtl):
@@ -249,10 +262,10 @@ def printInstFormat1(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
 					getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
 					" <- ",
-					getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"])),
+					getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
 					" , ",
-					getInputSymbol(inst["src2"], vt, ut)+"."+(parseComponentSwizzle(extd["src2"])),
-					" ("+hex(inst["extid"])+" "+bin(inst["flag"])+")"],
+					getInputSymbol(inst["src2"], vt, ut, 0)+"."+(parseComponentSwizzle(extd["src2"])),
+					" ("+hex(inst["extid"])+" "+bin(inst["idx"])+" "+hex(extd["rest"])+")"],
 					[8, 32, None, 32, None, 32, None])
 
 def printInstFormat4(k, n, inst, e, lt, vt, ut, ot):
@@ -261,7 +274,18 @@ def printInstFormat4(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
 					getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
 					" <- ",
-					getInputSymbol(inst["src1"], vt, ut)+"."+(parseComponentSwizzle(extd["src1"])),
+					getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
+					"   ", "",
+					" ("+hex(inst["extid"])+")"],
+					[8, 32, None, 32, None, 32, None])
+
+def printInstFormat7(k, n, inst, e, lt, vt, ut, ot):
+	ext=e[inst["extid"]][0]
+	extd=parseExt(ext)
+	outputStringList(k, [n,
+					"idx.xy__",
+					" <- ",
+					getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
 					"   ", "",
 					" ("+hex(inst["extid"])+")"],
 					[8, 32, None, 32, None, 32, None])
@@ -289,23 +313,13 @@ def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
 					getLabelSymbol(inst["addr"], lt),
 					" ,  ",
-					getInputSymbol((inst['bool']&0xF)+0x88, vt, ut),
-					"   ", "",
-					" ("+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
-					[8, 16, None, 16, None, 16, None])
-
-# CONDJUMP (uniform, no else)
-def printInstFormat7(k, n, inst, e, lt, vt, ut, ot):
-	outputStringList(k, [n,
-					getLabelSymbol(inst["addr"], lt),
-					" ,  ",
-					getInputSymbol((inst['bool']&0xF)+0x88, vt, ut),
+					getInputSymbol((inst['bool']&0xF)+0x88, vt, ut, 0),
 					"   ", "",
 					" ("+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
 					[8, 16, None, 16, None, 16, None])
 
 instList={}
-fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5), (parseInstFormat6, printInstFormat6)]
+fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5), (parseInstFormat6, printInstFormat6), (parseInstFormat1, printInstFormat7)]
 
 instList[0x00]={"name" : "ADD", "format" : 0} #really SUB ?
 instList[0x01]={"name" : "DP3", "format" : 0}
@@ -316,12 +330,13 @@ instList[0x0C]={"name" : "MAX", "format" : 0} #definitely
 instList[0x0D]={"name" : "MIN", "format" : 0} #definitely
 instList[0x0E]={"name" : "RCP", "format" : 3} #1/op1
 instList[0x0F]={"name" : "RSQ", "format" : 3} #1/sqrt(op1)
+instList[0x12]={"name" : "SETIDX", "format" : 6}
 instList[0x13]={"name" : "MOV", "format" : 3}
 instList[0x24]={"name" : "CALL1", "format" : 1} #CALL1 is probably just a regular old CALL
 instList[0x25]={"name" : "CALL2", "format" : 1} #CALL2 is probably conditional (to CALLC what IF? is to IFU)
 instList[0x26]={"name" : "CALLU", "format" : 4} #conditional call (uniform bool)
 instList[0x27]={"name" : "IFU", "format" : 4} #if/else statement (uniform bool)
-instList[0x29]={"name" : "JMPU?", "format" : 4} #conditional jump ? (uniform bool)
+instList[0x29]={"name" : "LOOP?", "format" : 4} #?
 instList[0x2b]={"name" : "SETEMIT", "format" : 5}
 instList[0x2c]={"name" : "JMPC?", "format" : 1} #conditional jump ?
 instList[0x2e]={"name" : "CMP1?", "format" : 0} #?
@@ -350,6 +365,16 @@ def parseCode(data, e, lt, vt, ut, ot):
 			outputStringList(k,["RET"],[8])
 		elif opcode==0x22:
 			outputStringList(k,["FLUSH"],[8])
+		elif  opcode==0x23:
+			inst=parseInstFormat2(k, v, lt)
+			addr=inst["addr"]
+			cond=""
+			op1=""
+			op2=""
+			outputStringList(k,
+					["BREAK?",
+			        "(flags: "+bin(inst['flags'])+" )"],
+			        [8,16])
 		elif  opcode==0x28:
 			inst=parseInstFormat2(k, v, lt)
 			addr=inst["addr"]
@@ -397,9 +422,9 @@ def parseCode(data, e, lt, vt, ut, ot):
 				outputStringList(k,["???%02X"%(inst["opcode"]),
 								       getOutputSymbol(inst["dst"], ot),
 								       " <- ",
-								       getInputSymbol(inst["src1"], vt, ut),
+								       getInputSymbol(inst["src1"], vt, ut, 0),
 								       " , ",
-								       getInputSymbol(inst["src2"], vt, ut),
+								       getInputSymbol(inst["src2"], vt, ut, 0),
 								       "(invalid extension id)"],
 								    [8, 16, None, 16, None, 16, None])
 
