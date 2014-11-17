@@ -86,14 +86,7 @@ def getRegisterNameSRC1(v):
 		return ("r%02X"%(v))
 
 def getRegisterNameSRC2(v):
-	if v<0x10:
-		return "v"+str(v&0xF)
-	elif v<0x20:
-		return "r"+str(v-0x10)
-	elif v<0x80:
-		return "c"+str(v-0x20)
-	else:
-		return ("r%02X"%(v))
+	return getRegisterNameSRC1(v)
 
 def getRegisterNameDST(v):
 	if v<0x10:
