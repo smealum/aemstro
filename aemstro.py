@@ -203,9 +203,9 @@ def parseInstFormat8(k, v, lt={}):
 def parseInstFormat9(k, v, lt={}):
 	return {"opcode" : v>>26,
 			"dst"   : (v>>24)&0x1F,
-			"src3"   : (v>>17)&0x7F,
+			"src1"   : (v>>17)&0x7F,
 			"src2"   : (v>>10)&0x7F,
-			"src1"    : (v>>5)&0x1F,
+			"src3"    : (v>>5)&0x1F,
 			"idx"    : 0x0,
 			"extid"  : (v)&0x1F}
 
@@ -386,8 +386,8 @@ instList[0x2b]={"name" : "SETEMIT", "format" : 5}
 instList[0x2c]={"name" : "JMPC?", "format" : 1} #conditional jump ?
 instList[0x2e]={"name" : "CMP1?", "format" : 0} #?
 instList[0x2f]={"name" : "CMP2?", "format" : 0} #?
-for i in range(0x10):
-	instList[0x30+i]={"name" : "MAD", "format" : 8}
+for i in range(0x8):
+	instList[0x38+i]={"name" : "MAD", "format" : 8}
 
 def parseCode(data, e, lt, vt, ut, ot):
 	l=len(data)
