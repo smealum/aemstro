@@ -70,8 +70,10 @@ def parseExtTable(data):
 	return out
 
 def getRegisterNameSRC(v):
-	if v<0x88:
+	if v<0x80:
 		return getRegisterNameSRC1(v)
+	elif v<0x88:
+		return "i"+str(v-0x80)
 	else:
 		return "b"+str(v-0x88)
 
@@ -354,13 +356,24 @@ def printInstFormat2(k, n, inst, e, lt, vt, ut, ot):
 
 # CONDJUMP (uniform)
 def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
-	outputStringList(k, [n,
-					getLabelSymbol(inst["addr"], lt),
-					" ,  ",
-					getInputSymbol((inst['bool']&0xF)+0x88, vt, ut, 0),
-					"   ", "",
-					" ("+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
-					[8, 16, None, 16, None, 16, None])
+	if inst["opcode"]==0x29: #LOOP
+		outputStringList(k, [n,
+						"(lcnt=0; lcnt < "+getInputSymbol((inst['bool']&0xF)+0x80, vt, ut, 0)+"; lcnt++)",
+						" (adr "+getLabelSymbol(inst["addr"], lt)+", "+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
+						[8, 16, 16])
+	elif inst["opcode"]==0x27: #IFU
+		outputStringList(k, [n,
+						"("+getInputSymbol((inst['bool']&0xF)+0x88, vt, ut, 0)+")",
+						" (adr "+getLabelSymbol(inst["addr"], lt)+", "+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
+						[8, 16, 16])
+	else:
+		outputStringList(k, [n,
+						getLabelSymbol(inst["addr"], lt),
+						" ,  ",
+						getInputSymbol((inst['bool']&0xF)+(0x80 if inst["opcode"]==0x29 else 0x88), vt, ut, 0),
+						"   ", "",
+						" ("+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
+						[8, 16, None, 16, None, 16, None])
 
 instList={}
 fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5), (parseInstFormat6, printInstFormat6), (parseInstFormat1, printInstFormat7), (parseInstFormat8, printInstFormat1), (parseInstFormat9, printInstFormat9)]
@@ -381,7 +394,7 @@ instList[0x24]={"name" : "CALL1", "format" : 1} #CALL1 is probably just a regula
 instList[0x25]={"name" : "CALL2", "format" : 1} #CALL2 is probably conditional (to CALLC what IF? is to IFU)
 instList[0x26]={"name" : "CALLU", "format" : 4} #conditional call (uniform bool)
 instList[0x27]={"name" : "IFU", "format" : 4} #if/else statement (uniform bool)
-instList[0x29]={"name" : "LOOP?", "format" : 4} #?
+instList[0x29]={"name" : "LOOP", "format" : 4} #?
 instList[0x2b]={"name" : "SETEMIT", "format" : 5}
 instList[0x2c]={"name" : "JMPC?", "format" : 1} #conditional jump ?
 instList[0x2e]={"name" : "CMP1?", "format" : 0} #?
@@ -419,7 +432,7 @@ def parseCode(data, e, lt, vt, ut, ot):
 			op1=""
 			op2=""
 			outputStringList(k,
-					["BREAK?",
+					["BREAK",
 			        "(flags: "+bin(inst['flags'])+" )"],
 			        [8,16])
 		elif  opcode==0x28:
@@ -514,7 +527,8 @@ def parseVarTable(data, sym):
 		base=transformRegisterValue(v1)
 		end=transformRegisterValue(v2)
 
-		iprint(getRegisterNameSRC(base)+" - "+getRegisterNameSRC(end)+" : "+parseSymbol(sym,off))
+		# iprint(getRegisterNameSRC(base)+" - "+getRegisterNameSRC(end)+" : "+parseSymbol(sym,off))
+		iprint(getRegisterNameSRC(base)+" - "+getRegisterNameSRC(end)+" : "+parseSymbol(sym,off)+" ("+hex(getWord(data,i))+", "+hex(getWord(data,i+4))+")")
 		for k in range(base, end+1):
 			name=parseSymbol(sym,off)+"["+str(k-base)+"]"
 			src[getRegisterNameSRC(k)]=name
@@ -583,6 +597,10 @@ def parseDVLE(data,dvlp, k):
 	iprint("vertex shader" if shaderType==0x0 else "geometry shader")
 	iprint("main : "+hex(mainStart)+"-"+hex(mainEnd))
 	print("")
+
+	# # temporarily filter out geometry shaders
+	# if shaderType!=0x0:
+	# 	return
 
 	codeStartOffset=getWord(data, 0x8)
 	codeEndOffset=getWord(data, 0xC)
