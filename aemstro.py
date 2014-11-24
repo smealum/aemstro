@@ -382,6 +382,14 @@ def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 						"("+getInputSymbol((inst['bool']&0xF)+0x88, vt, ut, 0)+")",
 						" ("+getLabelSymbol(inst["addr"], lt)+", "+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
 						[8, 16, 16])
+	elif inst["opcode"]==0x2d: #JMPU
+		outputStringList(k, [n,
+						getLabelSymbol(inst["addr"], lt),
+						" ,  ",
+						("!" if inst["ret"]==1 else "")+getInputSymbol((inst['bool']&0xF)+0x88, vt, ut, 0),
+						"   ", "",
+						" ("+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
+						[8, 16, None, 16, None, 16, None])
 	else:
 		outputStringList(k, [n,
 						getLabelSymbol(inst["addr"], lt),
@@ -450,6 +458,7 @@ instList[0x28]={"name" : "IFC", "format" : 10}
 instList[0x29]={"name" : "LOOP", "format" : 4}
 instList[0x2b]={"name" : "SETEMIT", "format" : 5}
 instList[0x2c]={"name" : "JMPC", "format" : 10} #conditional jump
+instList[0x2d]={"name" : "JMPU", "format" : 4} #conditional jump (uniform bool)
 for i in range(0x2):
 	instList[0x2e+i]={"name" : "CMP", "format" : 9}
 for i in range(0x8):
@@ -481,11 +490,6 @@ def parseCode(data, e, lt, vt, ut, ot):
 		elif opcode==0x2A:
 			inst=parseInstFormat1(k, v)
 			outputStringList(k,["EMITVERTEX"],[10])
-		elif opcode==0x2D:
-			inst=parseInstFormat1(k, v)
-			ext=e[inst["extid"]][0]
-			extd=parseExt(ext)
-			printInstFormat1(k, "SUB?", inst, e, lt, vt, ut, ot)
 		else:
 			inst=parseInstFormat1(k, v)
 			if inst["extid"] < len(e):
