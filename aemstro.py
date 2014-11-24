@@ -179,6 +179,15 @@ def parseComponentSwizzle(v):
 		out+=comp[(v>>((3-i)*2))&0x3]
 	return out
 
+def parseInstFormat10(k, v, lt={}):
+	return {"opcode" : v>>26,
+			"src2"   : (v>>7)&0x1F,
+			"src1"   : (v>>12)&0x7F,
+			"idx"    : (v>>19)&0x3,
+			"cmpY"    : (v>>21)&0x7,
+			"cmpX"    : (v>>24)&0x7,
+			"extid"  : (v)&0x7F}
+
 def parseInstFormat1(k, v, lt={}):
 	return {"opcode" : v>>26,
 			"src2"   : (v>>7)&0x1F,
@@ -286,6 +295,20 @@ def printInstFormat1(k, n, inst, e, lt, vt, ut, ot):
 					" ("+hex(inst["extid"])+" "+bin(inst["idx"])+" "+hex(extd["rest"])+")"],
 					[8, 32, None, 32, None, 32, None])
 
+cmpOp={0x0 : "EQ", 0x1 : "NE", 0x2 : "LT", 0x3 : "LE", 0x4 : "GT", 0x5 : "GE", 0x6 : "??", 0x7 : "??"}
+
+def printInstFormat10(k, n, inst, e, lt, vt, ut, ot):
+	ext=e[inst["extid"]][0]
+	extd=parseExt(ext)
+	nsrc1="-" if extd["nsrc1"]==1 else ""
+	nsrc2="-" if extd["nsrc2"]==1 else ""
+	outputStringList(k, [n,
+					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
+					"("+cmpOp[inst["cmpX"]]+", "+cmpOp[inst["cmpY"]]+")",
+					nsrc2+getInputSymbol(inst["src2"], vt, ut, 0)+"."+(parseComponentSwizzle(extd["src2"])),
+					" ("+hex(inst["extid"])+" "+bin(inst["idx"])+")"],
+					[8, 32, 12, 32, None])
+
 def printInstFormat9(k, n, inst, e, lt, vt, ut, ot):
 	ext=e[inst["extid"]][0]
 	extd=parseExt(ext)
@@ -357,7 +380,7 @@ def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 	elif inst["opcode"]==0x27: #IFU
 		outputStringList(k, [n,
 						"("+getInputSymbol((inst['bool']&0xF)+0x88, vt, ut, 0)+")",
-						" (adr "+getLabelSymbol(inst["addr"], lt)+", "+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
+						" ("+getLabelSymbol(inst["addr"], lt)+", "+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
 						[8, 16, 16])
 	else:
 		outputStringList(k, [n,
@@ -368,8 +391,43 @@ def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 						" ("+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
 						[8, 16, None, 16, None, 16, None])
 
+# CONDJUMP (dynamic)
+def printInstFormat11(k, n, inst, e, lt, vt, ut, ot):
+		cond=""
+		if inst["flags"]&0x3==0x0: #OR
+			cond=("!" if inst["flags"]&0x8 == 0 else "")+"x"+" || "+("!" if inst["flags"]&0x4 == 0 else "")+"y"
+		elif inst["flags"]&0x3==0x1: #AND
+			cond=("!" if inst["flags"]&0x8 == 0 else "")+"x"+" && "+("!" if inst["flags"]&0x4 == 0 else "")+"y"
+		elif inst["flags"]&0x3==0x2: #Y
+						cond=("!" if inst["flags"]&0x4 == 0 else "")+"y"
+		elif inst["flags"]&0x3==0x3: #X
+						cond=("!" if inst["flags"]&0x8 == 0 else "")+"x"
+
+		if inst["opcode"]==0x23: #BREAK
+			outputStringList(k, [n,
+							"("+cond+")",
+							"   ", "",
+							" ("+str(inst["ret"])+ " words, "+str(inst['flags']&0xF)+")"],
+							[8, 16, None, 16, None])
+		elif inst["opcode"]==0x28: #IF
+			outputStringList(k, [n,
+							"("+cond+")",
+							" ,  ",
+							getLabelSymbol(inst["addr"], lt),
+							"   ", "",
+							" ("+str(inst["ret"])+ " words, "+str(inst['flags']&0xF)+")"],
+							[8, 16, None, 16, None, 16, None])
+		else:
+			outputStringList(k, [n,
+							getLabelSymbol(inst["addr"], lt),
+							" ,  ",
+							"("+cond+")",
+							"   ", "",
+							" ("+str(inst["ret"])+ " words, "+str(inst['flags']&0xF)+")"],
+							[8, 16, None, 16, None, 16, None])
+
 instList={}
-fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5), (parseInstFormat6, printInstFormat6), (parseInstFormat1, printInstFormat7), (parseInstFormat8, printInstFormat1), (parseInstFormat9, printInstFormat9)]
+fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5), (parseInstFormat6, printInstFormat6), (parseInstFormat1, printInstFormat7), (parseInstFormat8, printInstFormat1), (parseInstFormat9, printInstFormat9), (parseInstFormat10, printInstFormat10), (parseInstFormat2, printInstFormat11)]
 
 instList[0x00]={"name" : "ADD", "format" : 0} #really SUB ?
 instList[0x01]={"name" : "DP3", "format" : 0}
@@ -383,15 +441,17 @@ instList[0x0F]={"name" : "RSQ", "format" : 3} #1/sqrt(op1)
 instList[0x12]={"name" : "SETIDX", "format" : 6}
 instList[0x13]={"name" : "MOV", "format" : 3}
 instList[0x18]={"name" : "DP4I", "format" : 7}
-instList[0x24]={"name" : "CALL1", "format" : 1} #CALL1 is probably just a regular old CALL
-instList[0x25]={"name" : "CALL2", "format" : 1} #CALL2 is probably conditional (to CALLC what IF? is to IFU)
+instList[0x23]={"name" : "BREAKC", "format" : 10} #conditional break
+instList[0x24]={"name" : "CALL", "format" : 1} #unconditional call
+instList[0x25]={"name" : "CALLC", "format" : 10} #conditional call
 instList[0x26]={"name" : "CALLU", "format" : 4} #conditional call (uniform bool)
 instList[0x27]={"name" : "IFU", "format" : 4} #if/else statement (uniform bool)
-instList[0x29]={"name" : "LOOP", "format" : 4} #?
+instList[0x28]={"name" : "IFC", "format" : 10}
+instList[0x29]={"name" : "LOOP", "format" : 4}
 instList[0x2b]={"name" : "SETEMIT", "format" : 5}
-instList[0x2c]={"name" : "JMPC?", "format" : 1} #conditional jump ?
-instList[0x2e]={"name" : "CMP1?", "format" : 0} #?
-instList[0x2f]={"name" : "CMP2?", "format" : 0} #?
+instList[0x2c]={"name" : "JMPC", "format" : 10} #conditional jump
+for i in range(0x2):
+	instList[0x2e+i]={"name" : "CMP", "format" : 9}
 for i in range(0x8):
 	instList[0x38+i]={"name" : "MAD", "format" : 8}
 
@@ -418,44 +478,6 @@ def parseCode(data, e, lt, vt, ut, ot):
 			outputStringList(k,["RET"],[8])
 		elif opcode==0x22:
 			outputStringList(k,["FLUSH"],[8])
-		elif  opcode==0x23:
-			inst=parseInstFormat2(k, v, lt)
-			addr=inst["addr"]
-			cond=""
-			op1=""
-			op2=""
-			outputStringList(k,
-					["BREAK",
-			        "(flags: "+bin(inst['flags'])+" )"],
-			        [8,16])
-		elif  opcode==0x28:
-			inst=parseInstFormat2(k, v, lt)
-			addr=inst["addr"]
-			cond=""
-			op1=""
-			op2=""
-			#EXPERIMENT, PROBABLY WRONG
-			if inst["flags"]&0x4!=0x0:
-				op2="op.y>=0"
-			else:
-				op2="op.y<=0"
-			if inst["flags"]&0x8!=0x0:
-				op1="op.x>=0"
-			else:
-				op1="op.x<=0"
-			if inst['flags']&0x3==0x0:
-				cond=op1+" || "+op2
-			elif inst['flags']&0x3==0x1:
-				cond=op1+" && "+op2
-			elif inst['flags']&0x3==0x2:
-				cond=op1
-			elif inst['flags']&0x3==0x3:
-				cond=op2
-			outputStringList(k,
-					["IF?",
-					getLabelSymbol(inst["addr"], lt),
-			        "("+str(inst["ret"])+ " words, flags: "+bin(inst['flags'])+" "+cond+")"],
-			        [8,16,16])
 		elif opcode==0x2A:
 			inst=parseInstFormat1(k, v)
 			outputStringList(k,["EMITVERTEX"],[10])

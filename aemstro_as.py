@@ -275,14 +275,17 @@ def assembleFormat2(d):
 
 def parseFormat2(dvle, s):
 	operandFmt1="[^\s,]*"
-	operandFmt2="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
+	# operandFmt2="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
 	operandFmt3="0b[0-1]+"
-	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt2+"),\s*("+operandFmt3+")")
+	# p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt2+"),\s*("+operandFmt3+")")
+	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt3+")")
 	r=p.match(s)
+	print(r.group(1))
+	print(dvle.getLabelAddress(r.group(1)))
 	if r:
 		return {"addr" : dvle.getLabelAddress(r.group(1)),
-			"ret" : int(r.group(2),0),
-			"flags" : int(r.group(3),0)}
+			"ret" : 0,
+			"flags" : int(r.group(2),0)}
 	else:
 		raise Exception("encountered error while parsing instruction")
 
@@ -309,8 +312,26 @@ def parseFormat4(dvle, s):
 	else:
 		raise Exception("encountered error while parsing instruction")
 
+def assembleFormat5(d):
+	return (d["opcode"]<<26)|((d["cmpx"]&0x7)<<24)|((d["cmpy"]&0x7)<<21)|((d["src1"]&0x7F)<<12)|((d["src2"]&0x1F)<<7)|(d["extid"]&0x7F)
+
+def parseFormat5(dvle, s):
+	operandFmt="[^\s,]*"
+	descFmt="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
+	opFmt="[0-9]+"
+	p=re.compile("^\s*("+operandFmt+"),\s*("+opFmt+"),\s*("+opFmt+"),\s*("+operandFmt+")\s*\(("+descFmt+")\)")
+	r=p.match(s)
+	if r:
+		return {"src1" : getRegisterFromNameSrc1(r.group(1)),
+			"cmpx" : int(r.group(2)),
+			"cmpy" : int(r.group(3)),
+			"src2" : getRegisterFromNameSrc2(r.group(4)),
+			"extid" : int(r.group(5),0)}
+	else:
+		raise Exception("encountered error while parsing instruction")
+
 instList={}
-fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4)]
+fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5)]
 
 instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
@@ -319,9 +340,10 @@ instList["mul"]={"opcode" : 0x08, "format" : 0}
 instList["max"]={"opcode" : 0x0C, "format" : 0}
 instList["min"]={"opcode" : 0x0D, "format" : 0}
 instList["mov"]={"opcode" : 0x13, "format" : 3}
+instList["if"] ={"opcode" : 0x28, "format" : 1}
+instList["cmp"]={"opcode" : 0x2e, "format" : 4}
 instList["end"]={"opcode" : 0x21, "format" : 2}
 instList["flush"]={"opcode" : 0x22, "format" : 2}
-instList["if"]={"opcode" : 0x28, "format" : 1}
 
 def parseConst(dvlp, dvle, s):
 	s=s.split(",")
@@ -392,7 +414,7 @@ def parseInstruction(dvle, s):
 
 def parseLabel(s):
 	s=s.lower()
-	p=re.compile("^\s*([a-z0-9]*):")
+	p=re.compile("^\s*([a-z_0-9]*):")
 	r=p.match(s)
 	if r:
 		return r.group(1)
