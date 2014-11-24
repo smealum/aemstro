@@ -395,13 +395,13 @@ def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 def printInstFormat11(k, n, inst, e, lt, vt, ut, ot):
 		cond=""
 		if inst["flags"]&0x3==0x0: #OR
-			cond=("!" if inst["flags"]&0x8 == 0 else "")+"x"+" || "+("!" if inst["flags"]&0x4 == 0 else "")+"y"
+			cond=("!" if inst["flags"]&0x8 == 0 else "")+"cmp.x"+" || "+("!" if inst["flags"]&0x4 == 0 else "")+"cmp.y"
 		elif inst["flags"]&0x3==0x1: #AND
-			cond=("!" if inst["flags"]&0x8 == 0 else "")+"x"+" && "+("!" if inst["flags"]&0x4 == 0 else "")+"y"
+			cond=("!" if inst["flags"]&0x8 == 0 else "")+"cmp.x"+" && "+("!" if inst["flags"]&0x4 == 0 else "")+"cmp.y"
 		elif inst["flags"]&0x3==0x2: #Y
-						cond=("!" if inst["flags"]&0x4 == 0 else "")+"y"
+						cond=("!" if inst["flags"]&0x4 == 0 else "")+"cmp.y"
 		elif inst["flags"]&0x3==0x3: #X
-						cond=("!" if inst["flags"]&0x8 == 0 else "")+"x"
+						cond=("!" if inst["flags"]&0x8 == 0 else "")+"cmp.x"
 
 		if inst["opcode"]==0x23: #BREAK
 			outputStringList(k, [n,
