@@ -351,6 +351,7 @@ instList["flr"]={"opcode" : 0x0B, "format" : 3}
 instList["max"]={"opcode" : 0x0C, "format" : 0}
 instList["min"]={"opcode" : 0x0D, "format" : 0}
 instList["mov"]={"opcode" : 0x13, "format" : 3}
+instList["dphi"]={"opcode" : 0x18, "format" : 5}
 instList["sgei"]={"opcode" : 0x1a, "format" : 5}
 instList["slti"]={"opcode" : 0x1b, "format" : 5}
 instList["if"] ={"opcode" : 0x28, "format" : 1}
