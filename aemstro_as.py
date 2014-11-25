@@ -337,6 +337,7 @@ instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
 instList["dp4"]={"opcode" : 0x02, "format" : 0}
 instList["mul"]={"opcode" : 0x08, "format" : 0}
+instList["flr"]={"opcode" : 0x0B, "format" : 3}
 instList["max"]={"opcode" : 0x0C, "format" : 0}
 instList["min"]={"opcode" : 0x0D, "format" : 0}
 instList["mov"]={"opcode" : 0x13, "format" : 3}

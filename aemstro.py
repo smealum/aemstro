@@ -286,14 +286,24 @@ def printInstFormat1(k, n, inst, e, lt, vt, ut, ot):
 	extd=parseExt(ext)
 	nsrc1="-" if extd["nsrc1"]==1 else ""
 	nsrc2="-" if extd["nsrc2"]==1 else ""
-	outputStringList(k, [n,
-					getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
-					" <- ",
-					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
-					" , ",
-					nsrc2+getInputSymbol(inst["src2"], vt, ut, 0)+"."+(parseComponentSwizzle(extd["src2"])),
-					" ("+hex(inst["extid"])+" "+bin(inst["idx"])+" "+hex(extd["rest"])+")"],
-					[8, 32, None, 32, None, 32, None])
+	if inst["opcode"]==0x0B: #unary ops !
+		outputStringList(k, [n,
+						getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
+						" <- ",
+						nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
+						"   ",
+						"",
+						" ("+hex(inst["extid"])+" "+bin(inst["idx"])+" "+hex(extd["rest"])+")"],
+						[8, 32, None, 32, None, 32, None])
+	else:
+		outputStringList(k, [n,
+						getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
+						" <- ",
+						nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
+						" , ",
+						nsrc2+getInputSymbol(inst["src2"], vt, ut, 0)+"."+(parseComponentSwizzle(extd["src2"])),
+						" ("+hex(inst["extid"])+" "+bin(inst["idx"])+" "+hex(extd["rest"])+")"],
+						[8, 32, None, 32, None, 32, None])
 
 cmpOp={0x0 : "EQ", 0x1 : "NE", 0x2 : "LT", 0x3 : "LE", 0x4 : "GT", 0x5 : "GE", 0x6 : "??", 0x7 : "??"}
 
@@ -441,7 +451,8 @@ instList[0x00]={"name" : "ADD", "format" : 0} #really SUB ?
 instList[0x01]={"name" : "DP3", "format" : 0}
 instList[0x02]={"name" : "DP4", "format" : 0}
 instList[0x08]={"name" : "MUL", "format" : 0}
-instList[0x0B]={"name" : "SIN?", "format" : 3} #maybe COS ?
+# instList[0x0B]={"name" : "SIN?", "format" : 3} #maybe COS ?
+instList[0x0B]={"name" : "FLR", "format" : 0} #tested, definitely FLR and not FRC
 instList[0x0C]={"name" : "MAX", "format" : 0} #definitely
 instList[0x0D]={"name" : "MIN", "format" : 0} #definitely
 instList[0x0E]={"name" : "RCP", "format" : 3} #1/op1
@@ -461,6 +472,8 @@ instList[0x2c]={"name" : "JMPC", "format" : 10} #conditional jump
 instList[0x2d]={"name" : "JMPU", "format" : 4} #conditional jump (uniform bool)
 for i in range(0x2):
 	instList[0x2e+i]={"name" : "CMP", "format" : 9}
+for i in range(0x8):
+	instList[0x30+i]={"name" : "LRP", "format" : 8}
 for i in range(0x8):
 	instList[0x38+i]={"name" : "MAD", "format" : 8}
 
