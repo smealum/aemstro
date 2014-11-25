@@ -198,8 +198,8 @@ def parseInstFormat1(k, v, lt={}):
 
 def parseInstFormat8(k, v, lt={}):
 	return {"opcode" : v>>26,
-			"src1"   : (v>>7)&0x7F,
-			"src2"   : (v>>14)&0x1F,
+			"src2"   : (v>>7)&0x7F,
+			"src1"   : (v>>14)&0x1F,
 			"idx"    : (v>>19)&0x3,
 			"dst"    : (v>>21)&0x1F,
 			"extid"  : (v)&0x7F}
@@ -454,6 +454,8 @@ instList[0x0F]={"name" : "RSQ", "format" : 3} #1/sqrt(op1)
 instList[0x12]={"name" : "SETIDX", "format" : 6}
 instList[0x13]={"name" : "MOV", "format" : 3}
 instList[0x18]={"name" : "DP4I", "format" : 7}
+instList[0x1A]={"name" : "SGEI", "format" : 7}
+instList[0x1B]={"name" : "SLTI", "format" : 7}
 instList[0x23]={"name" : "BREAKC", "format" : 10} #conditional break
 instList[0x24]={"name" : "CALL", "format" : 1} #unconditional call
 instList[0x25]={"name" : "CALLC", "format" : 10} #conditional call

@@ -330,8 +330,11 @@ def parseFormat5(dvle, s):
 	else:
 		raise Exception("encountered error while parsing instruction")
 
+def assembleFormat6(d):
+	return (d["opcode"]<<26)|((d["dst"]&0x1F)<<21)|((d["src2"]&0x7F)<<7)|((d["src1"]&0x1F)<<14)|(d["extid"]&0x7F)
+
 instList={}
-fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5)]
+fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5), (parseFormat1, assembleFormat6)]
 
 instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
@@ -348,6 +351,8 @@ instList["flr"]={"opcode" : 0x0B, "format" : 3}
 instList["max"]={"opcode" : 0x0C, "format" : 0}
 instList["min"]={"opcode" : 0x0D, "format" : 0}
 instList["mov"]={"opcode" : 0x13, "format" : 3}
+instList["sgei"]={"opcode" : 0x1a, "format" : 5}
+instList["slti"]={"opcode" : 0x1b, "format" : 5}
 instList["if"] ={"opcode" : 0x28, "format" : 1}
 instList["cmp"]={"opcode" : 0x2e, "format" : 4}
 instList["end"]={"opcode" : 0x21, "format" : 2}
