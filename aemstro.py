@@ -259,7 +259,7 @@ def parseInstFormat5(k, v, lt={}):
 		if ret["ret"]>0:
 			lt[ret["addr"]]=(-1,"ELSE_%X"%(k))
 	elif ret["opcode"]==0x29: #LOOP
-		for i in range(k+4,ret["addr"],4):
+		for i in range(k+4,ret["addr"]+4,4):
 			indentLine(i)
 	return ret
 
@@ -361,8 +361,9 @@ def printInstFormat6(k, n, inst, e, lt, vt, ut, ot):
 		prim=["","TRIANGLE_FAN","TRIANGLE","TRIANGLE_STRIP"]
 		outputStringList(k, [n,
 						"vtx%02X," % inst["vtxid"],
-						prim[inst["primid"]]],
-						[8, 8, 8])
+						prim[inst["primid"]],
+						str(inst["primid"])],
+						[8, 8, 16, 8])
 
 def printInstFormat2(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
@@ -518,9 +519,16 @@ def parseCode(data, e, lt, vt, ut, ot):
 
 		k+=0x4
 
-def parseDVLP(data, lt, vt, ut, ot):
+def parseDVLP(data, lt, vt, ut, ot, k):
 	l=len(data)
 	extOffset=getWord(data, 0x10)
+	fnOffset=getWord(data, 0x18)
+	# for i in range(fnOffset, l):
+	# 	if k==0:
+	# 		break
+	# 	elif data[i]==0:
+	# 		k-=1
+	# print(parseSymbol(data,i))
 	extSize=getWord(data, 0x14)*8
 	ext=parseExtTable(data[extOffset:(extOffset+extSize)])
 	codeOffset=getWord(data, 0x8)
@@ -557,9 +565,13 @@ def parseVarTable(data, sym):
 
 		# iprint(getRegisterNameSRC(base)+" - "+getRegisterNameSRC(end)+" : "+parseSymbol(sym,off))
 		iprint(getRegisterNameSRC(base)+" - "+getRegisterNameSRC(end)+" : "+parseSymbol(sym,off)+" ("+hex(getWord(data,i))+", "+hex(getWord(data,i+4))+")")
-		for k in range(base, end+1):
-			name=parseSymbol(sym,off)+"["+str(k-base)+"]"
-			src[getRegisterNameSRC(k)]=name
+		if base==end:
+			name=parseSymbol(sym,off)
+			src[getRegisterNameSRC(base)]=name
+		else:
+			for k in range(base, end+1):
+				name=parseSymbol(sym,off)+"["+str(k-base)+"]"
+				src[getRegisterNameSRC(k)]=name
 
 	unindentOut()
 	print("")
@@ -581,7 +593,7 @@ def parseConstTable(data, sym):
 	return out
 
 outputTypes={0x0 : "result.position",
-			0x1 : "result.normalquat?", #maybe
+			0x1 : "result.normalquat", #maybe
 			0x2 : "result.color",
 			0x3 : "result.texcoord0",
 			0x5 : "result.texcoord1",
@@ -605,7 +617,7 @@ def parseOutputTable(data, sym):
 		if v1 in outputTypes:
 			out[dst]=outputTypes[v1]
 
-		iprint("o"+str(v2)+" = "+(outputTypes[v1] if v1 in outputTypes else hex(v1))+" ("+hex(off)+")")
+		iprint("o"+str(v2)+" = "+(outputTypes[v1] if v1 in outputTypes else hex(v1))+" ("+hex(off)+", "+hex(v1)+", "+hex(v2)+")")
 
 	unindentOut()
 	print("")
@@ -628,6 +640,10 @@ def parseDVLE(data,dvlp, k):
 
 	# # temporarily filter out geometry shaders
 	# if shaderType!=0x0:
+	# 	return
+
+	# # temporarily filter out vertex shaders
+	# if shaderType==0x0:
 	# 	return
 
 	codeStartOffset=getWord(data, 0x8)
@@ -654,7 +670,7 @@ def parseDVLE(data,dvlp, k):
 	unifTable=parseConstTable(data[unifOffset:(unifOffset+unifSize)],sym)
 	outputTable=parseOutputTable(data[outputOffset:(outputOffset+outputSize)],sym)
 
-	parseDVLP(dvlp, labelTable, varTable, unifTable, outputTable)
+	parseDVLP(dvlp, labelTable, varTable, unifTable, outputTable, k)
 	print("")
 
 	return (labelTable,varTable,unifTable,range(codeStartOffset,codeEndOffset))
