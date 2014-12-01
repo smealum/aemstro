@@ -6,7 +6,7 @@ import struct
 #TODO : add parsing checks, handle errors more gracefully
 
 def toFloat24(f):
-	f=struct.pack('f', f)
+	f=bytearray(struct.pack('f', f))
 	s=f[3]>>7
 	tmp=(((f[3]<<1)|(f[2]>>7))&0xFF)-0x40
 	tmp2=(((f[0])|(f[1]<<8)|(f[2]<<16))>>7)&0xFFFF
