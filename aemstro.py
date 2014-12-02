@@ -110,6 +110,9 @@ def getRegisterName(v):
 
 def getInputSymbol(v, vt, ut, idx):
 	src=getRegisterNameSRC(v)
+	return getInputSymbolFromString(src, vt, ut, idx)
+
+def getInputSymbolFromString(src, vt, ut, idx):
 	idxstr=""
 
 	if idx==1:
@@ -353,17 +356,11 @@ def printInstFormat7(k, n, inst, e, lt, vt, ut, ot):
 					[8, 32, None, 32, None, 32, None])
 
 def printInstFormat6(k, n, inst, e, lt, vt, ut, ot):
-	if inst["primid"]==0x0:
-		outputStringList(k, [n,
-						"vtx%02X" % inst["vtxid"]],
-						[8, 8])
-	else:
-		prim=["","TRIANGLE_FAN","TRIANGLE","TRIANGLE_STRIP"]
-		outputStringList(k, [n,
-						"vtx%02X," % inst["vtxid"],
-						prim[inst["primid"]],
-						str(inst["primid"])],
-						[8, 8, 16, 8])
+	outputStringList(k, [n,
+					"vtx%02X," % inst["vtxid"],
+					"PRIM_EMIT" if inst["primid"]&2==2 else "",
+					"UNK_FLAG" if inst["primid"]&1==1 else ""],
+					[8, 8, 12, 16])
 
 def printInstFormat2(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
@@ -374,8 +371,12 @@ def printInstFormat2(k, n, inst, e, lt, vt, ut, ot):
 # CONDJUMP (uniform)
 def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 	if inst["opcode"]==0x29: #LOOP
+		reg=getRegisterNameSRC((inst['bool']&0xF)+0x80)
+		start=getInputSymbolFromString(reg+".y", vt, ut, 0)
+		end=getInputSymbolFromString(reg+".x", vt, ut, 0)
+		stride=getInputSymbolFromString(reg+".z", vt, ut, 0)
 		outputStringList(k, [n,
-						"(lcnt=0; lcnt < "+getInputSymbol((inst['bool']&0xF)+0x80, vt, ut, 0)+"; lcnt++)",
+						"(lcnt = "+start+"; lcnt < "+end+"; lcnt += "+stride+")",
 						" (adr "+getLabelSymbol(inst["addr"], lt)+", "+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
 						[8, 16, 16])
 	elif inst["opcode"]==0x27: #IFU
@@ -583,10 +584,31 @@ def parseConstTable(data, sym):
 	indentOut()
 	out={}
 	for i in range(0,l,0x14):
-		r=getWord(data,i+2,2)+0x20
-		vec=[convFloat24(getWord(data,i+k)) for k in range(4,0x14,4)]
+		type=getWord(data,i,2)
+		r=getWord(data,i+2,2)
+		name=None
+		if type==0x0:
+			#constant bool
+			vec=False if getWord(data,i+4)==0x0 else True
+			r+=0x88
+			name=str(vec)
+		elif type==0x1:
+			#constant integer vec4
+			vec=[hex(getWord(data,i+k,1)) for k in range(4,8,1)]
+			r+=0x80
+			out[getRegisterNameSRC(r)+".x"]=vec[0]
+			out[getRegisterNameSRC(r)+".y"]=vec[1]
+			out[getRegisterNameSRC(r)+".z"]=vec[2]
+			out[getRegisterNameSRC(r)+".w"]=vec[3]
+		else:
+			#constant float24 vec4 (should be type==0x2 but would rather output potential unknowns too)
+			vec=[convFloat24(getWord(data,i+k)) for k in range(4,0x14,4)]
+			r+=0x20
+			name="["+", ".join(["%4.2f"%(v) for v in vec])+"]"
+		# iprint(getRegisterNameSRC(r)+" = "+str(vec)+" ("+str([hex(getWord(data,i+k)) for k in range(0,0x14,4)])+")")
 		iprint(getRegisterNameSRC(r)+" = "+str(vec))
-		out[getRegisterNameSRC(r)]="["+", ".join(["%4.2f"%(v) for v in vec])+"]"
+		if name!=None:
+			out[getRegisterNameSRC(r)]=name
 
 	unindentOut()
 	print("")
