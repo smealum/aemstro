@@ -127,6 +127,10 @@ def getInputSymbolFromString(src, vt, ut, idx):
 	if src in ut:
 		return ut[src]+idxstr
 	else:
+		f=src.find(".")
+		if f>=0:
+			src=getInputSymbolFromString(src[:f], vt, ut, idx)+src[f:]
+			idxstr=""
 		return src+idxstr
 
 def getOutputSymbol(v, ot):
