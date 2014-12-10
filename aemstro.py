@@ -718,12 +718,16 @@ def parseDVLB(data):
 		# varTable[i]=r[1]
 		# unifTable[i]=r[2]
 	# parseDVLP(dvlp,labelTable,varTable,unifTable,dvleTable)
- 
-initIndent()
-src1fn=sys.argv[1]
-data=bytearray(open(src1fn, "rb").read())
-l=len(data)
 
-for i in range(0,l-4,4):
-	if getWord(data, i)==0x424C5644:
-		parseDVLB(data[i:l])
+if len(sys.argv)<2:
+	print("AEMSTRO :")
+	print("    aemstro.py  <input.shbin/input.bcsdr>")
+else:
+	initIndent()
+	src1fn=sys.argv[1]
+	data=bytearray(open(src1fn, "rb").read())
+	l=len(data)
+
+	for i in range(0,l-4,4):
+		if getWord(data, i)==0x424C5644:
+			parseDVLB(data[i:l])
