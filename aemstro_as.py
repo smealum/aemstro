@@ -40,9 +40,18 @@ class DVLE(object):
 	def addConstant(self, const):
 		self._const.append(const)
 
+	#(reg, v)
+	def addConstantB(self, const):
+		self._const.append(((const[0]<<16)|(0x0), const[1], 0, 0, 0))
+
+	#(reg, x, y, z, w)
+	def addConstantI(self, const):
+		print(const)
+		self._const.append(((const[0]<<16)|(0x1), ((const[1]&0xff)|((const[2]&0xff)<<8)|((const[3]&0xff)<<16)|(const[4]<<24)), (0), (0), (0)))
+
 	#(reg, x, y, z, w)
 	def addConstantF(self, const):
-		self._const.append((const[0]<<16, toFloat24(const[1]), toFloat24(const[2]), toFloat24(const[3]), toFloat24(const[4])))
+		self._const.append(((const[0]<<16)|(0x2), toFloat24(const[1]), toFloat24(const[2]), toFloat24(const[3]), toFloat24(const[4])))
 
 	#string
 	def addSymbol(self, s):
@@ -362,7 +371,17 @@ instList["flush"]={"opcode" : 0x22, "format" : 2}
 
 def parseConst(dvlp, dvle, s):
 	s=s.split(",")
-	dvle.addConstantF((int(s[0],0), float(s[1]), float(s[2]), float(s[3]), float(s[4])))
+	s[0]=s[0].strip()
+	if s[0][0]=="b":
+		# bool constant
+		dvle.addConstantB((int(s[0][1:],0), int(s[1])))
+	elif s[0][0]=="i":
+		# int vec4 constant
+		print(s)
+		dvle.addConstantI((int(s[0][1:],0), int(s[1],0), int(s[2],0), int(s[3],0), int(s[4],0)))
+	elif s[0][0]=="c":
+		# float vec4 constant
+		dvle.addConstantF((int(s[0][1:],0), float(s[1]), float(s[2]), float(s[3]), float(s[4])))
 
 outputTypes={"result.position" : 0x0,
 			"result.color" : 0x2,
