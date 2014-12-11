@@ -46,7 +46,6 @@ class DVLE(object):
 
 	#(reg, x, y, z, w)
 	def addConstantI(self, const):
-		print(const)
 		self._const.append(((const[0]<<16)|(0x1), ((const[1]&0xff)|((const[2]&0xff)<<8)|((const[3]&0xff)<<16)|(const[4]<<24)), (0), (0), (0)))
 
 	#(reg, x, y, z, w)
@@ -377,7 +376,6 @@ def parseConst(dvlp, dvle, s):
 		dvle.addConstantB((int(s[0][1:],0), int(s[1])))
 	elif s[0][0]=="i":
 		# int vec4 constant
-		print(s)
 		dvle.addConstantI((int(s[0][1:],0), int(s[1],0), int(s[2],0), int(s[3],0), int(s[4],0)))
 	elif s[0][0]=="c":
 		# float vec4 constant
@@ -421,7 +419,7 @@ def parseUniform(dvlp, dvle, s):
 	s=s.split(",")
 	for k in range(len(s)):
 		s[k]=s[k].replace(" ", "")
-	dvle.addInput((int(s[0],0),int(s[1],0),s[2]))
+	dvle.addInput((int(s[0],0)+0x10,int(s[1],0)+0x10,s[2]))
 
 dirList={}
 
