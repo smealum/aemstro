@@ -419,7 +419,17 @@ def parseUniform(dvlp, dvle, s):
 	s=s.split(",")
 	for k in range(len(s)):
 		s[k]=s[k].replace(" ", "")
-	dvle.addInput((int(s[0],0)+0x10,int(s[1],0)+0x10,s[2]))
+	type=s[0][0]
+	if type!=s[1][0]:
+		print("inconsisten uniform register assignment !")
+		return
+	if type=="c":
+		offset=0x10
+	elif type=="i":
+		offset=0x70
+	elif type=="b":
+		offset=0x78
+	dvle.addInput((int(s[0][1:],0)+offset,int(s[1][1:],0)+offset,s[2]))
 
 dirList={}
 
