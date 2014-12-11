@@ -190,7 +190,8 @@ def parseInstFormat10(k, v, lt={}):
 	return {"opcode" : v>>26,
 			"src2"   : (v>>7)&0x1F,
 			"src1"   : (v>>12)&0x7F,
-			"idx"    : (v>>19)&0x3,
+			"idx_1"    : (v>>19)&0x3,
+			"idx_2"    : 0x0,
 			"cmpY"    : (v>>21)&0x7,
 			"cmpX"    : (v>>24)&0x7,
 			"extid"  : (v)&0x7F}
@@ -199,7 +200,8 @@ def parseInstFormat1(k, v, lt={}):
 	return {"opcode" : v>>26,
 			"src2"   : (v>>7)&0x1F,
 			"src1"   : (v>>12)&0x7F,
-			"idx"    : (v>>19)&0x3,
+			"idx_1"    : (v>>19)&0x3,
+			"idx_2"    : 0x0,
 			"dst"    : (v>>21)&0x1F,
 			"extid"  : (v)&0x7F}
 
@@ -207,7 +209,8 @@ def parseInstFormat8(k, v, lt={}):
 	return {"opcode" : v>>26,
 			"src2"   : (v>>7)&0x7F,
 			"src1"   : (v>>14)&0x1F,
-			"idx"    : (v>>19)&0x3,
+			"idx_1"    : 0x0,
+			"idx_2"    : (v>>19)&0x3,
 			"dst"    : (v>>21)&0x1F,
 			"extid"  : (v)&0x7F}
 
@@ -217,7 +220,8 @@ def parseInstFormat9(k, v, lt={}):
 			"src1"   : (v>>17)&0x7F,
 			"src2"   : (v>>10)&0x7F,
 			"src3"    : (v>>5)&0x1F,
-			"idx"    : 0x0,
+			"idx_1"    : 0x0,
+			"idx_2"    : 0x0,
 			"extid"  : (v)&0x1F}
 
 def parseInstFormat2(k, v, lt={}):
@@ -296,10 +300,10 @@ def printInstFormat1(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
 					getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
 					" <- ",
-					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
+					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx_1"])+"."+(parseComponentSwizzle(extd["src1"])),
 					" , ",
-					nsrc2+getInputSymbol(inst["src2"], vt, ut, 0)+"."+(parseComponentSwizzle(extd["src2"])),
-					" ("+hex(inst["extid"])+" "+bin(inst["idx"])+" "+hex(extd["rest"])+")"],
+					nsrc2+getInputSymbol(inst["src2"], vt, ut, inst["idx_2"])+"."+(parseComponentSwizzle(extd["src2"])),
+					" ("+hex(inst["extid"])+" "+hex(extd["rest"])+")"],
 					[8, 32, None, 32, None, 32, None])
 
 cmpOp={0x0 : "EQ", 0x1 : "NE", 0x2 : "LT", 0x3 : "LE", 0x4 : "GT", 0x5 : "GE", 0x6 : "??", 0x7 : "??"}
@@ -310,10 +314,10 @@ def printInstFormat10(k, n, inst, e, lt, vt, ut, ot):
 	nsrc1="-" if extd["nsrc1"]==1 else ""
 	nsrc2="-" if extd["nsrc2"]==1 else ""
 	outputStringList(k, [n,
-					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
+					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx_1"])+"."+(parseComponentSwizzle(extd["src1"])),
 					"("+cmpOp[inst["cmpX"]]+", "+cmpOp[inst["cmpY"]]+")",
-					nsrc2+getInputSymbol(inst["src2"], vt, ut, 0)+"."+(parseComponentSwizzle(extd["src2"])),
-					" ("+hex(inst["extid"])+" "+bin(inst["idx"])+")"],
+					nsrc2+getInputSymbol(inst["src2"], vt, ut, inst["idx_2"])+"."+(parseComponentSwizzle(extd["src2"])),
+					" ("+hex(inst["extid"])+")"],
 					[8, 32, 12, 32, None])
 
 def printInstFormat9(k, n, inst, e, lt, vt, ut, ot):
@@ -325,12 +329,12 @@ def printInstFormat9(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
 					getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
 					" <- ",
-					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
+					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx_1"])+"."+(parseComponentSwizzle(extd["src1"])),
 					" , ",
-					nsrc2+getInputSymbol(inst["src2"], vt, ut, 0)+"."+(parseComponentSwizzle(extd["src2"])),
+					nsrc2+getInputSymbol(inst["src2"], vt, ut, inst["idx_2"])+"."+(parseComponentSwizzle(extd["src2"])),
 					" , ",
 					nsrc3+getInputSymbol(inst["src3"], vt, ut, 0)+"."+(parseComponentSwizzle(extd["src3"])),
-					" ("+hex(extd["rest"])+" "+bin(inst["idx"])+")"],
+					" ("+hex(extd["rest"])+")"],
 					[8, 32, None, 16, None, 16, None, 16, None])
 
 def printInstFormat4(k, n, inst, e, lt, vt, ut, ot):
@@ -341,7 +345,7 @@ def printInstFormat4(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
 					getOutputSymbol(inst["dst"], ot)+"."+extd["dstcomp"],
 					" <- ",
-					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
+					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx_1"])+"."+(parseComponentSwizzle(extd["src1"])),
 					"   ", "",
 					" ("+hex(inst["extid"])+")"],
 					[8, 32, None, 32, None, 32, None])
@@ -354,7 +358,7 @@ def printInstFormat7(k, n, inst, e, lt, vt, ut, ot):
 	outputStringList(k, [n,
 					"idx.xy__",
 					" <- ",
-					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx"])+"."+(parseComponentSwizzle(extd["src1"])),
+					nsrc1+getInputSymbol(inst["src1"], vt, ut, inst["idx_1"])+"."+(parseComponentSwizzle(extd["src1"])),
 					"   ", "",
 					" ("+hex(inst["extid"])+")"],
 					[8, 32, None, 32, None, 32, None])
