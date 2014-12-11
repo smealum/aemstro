@@ -283,17 +283,15 @@ def assembleFormat2(d):
 
 def parseFormat2(dvle, s):
 	operandFmt1="[^\s,]*"
-	# operandFmt2="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
 	operandFmt3="0b[0-1]+"
-	# p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt2+"),\s*("+operandFmt3+")")
-	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt3+")")
+	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt1+"),\s*("+operandFmt3+")")
 	r=p.match(s)
 	print(r.group(1))
 	print(dvle.getLabelAddress(r.group(1)))
 	if r:
-		return {"addr" : dvle.getLabelAddress(r.group(1)),
-			"ret" : 0,
-			"flags" : int(r.group(2),0)}
+		return {"addr" : dvle.getLabelAddress(r.group(2)),
+			"ret" : dvle.getLabelAddress(r.group(1))-dvle.getLabelAddress(r.group(2)),
+			"flags" : int(r.group(3),0)}
 	else:
 		raise Exception("encountered error while parsing instruction")
 
@@ -359,8 +357,26 @@ def assembleFormat7(d):
 	print(d)
 	return (d["opcode"]<<26)|((d["int"]&0xF)<<22)|((d["addr"]&0xFFF)<<10)|(d["ret"]&0x3FF)
 
+def parseFormat8(dvle, s):
+	operandFmt1="[^\s,]*"
+	operandFmt3="b[0-9]+"
+	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt1+"),\s*("+operandFmt3+")")
+	r=p.match(s)
+	print(r.group(1))
+	print(dvle.getLabelAddress(r.group(1)))
+	if r:
+		return {"addr" : dvle.getLabelAddress(r.group(2)),
+			"ret" : dvle.getLabelAddress(r.group(1))-dvle.getLabelAddress(r.group(2)),
+			"bool" : int(r.group(3).strip()[1:],0)}
+	else:
+		raise Exception("encountered error while parsing instruction")
+
+def assembleFormat8(d):
+	print(d)
+	return (d["opcode"]<<26)|((d["bool"]&0xF)<<22)|((d["addr"]&0xFFF)<<10)|(d["ret"]&0x3FF)
+
 instList={}
-fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5), (parseFormat1, assembleFormat6), (parseFormat7, assembleFormat7)]
+fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5), (parseFormat1, assembleFormat6), (parseFormat7, assembleFormat7), (parseFormat8, assembleFormat8)]
 
 instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
@@ -381,6 +397,7 @@ instList["dphi"]={"opcode" : 0x18, "format" : 5}
 instList["op19"]={"opcode" : 0x19, "format" : 5}
 instList["sgei"]={"opcode" : 0x1a, "format" : 5}
 instList["slti"]={"opcode" : 0x1b, "format" : 5}
+instList["ifu"] ={"opcode" : 0x27, "format" : 7}
 instList["ifc"] ={"opcode" : 0x28, "format" : 1}
 instList["loop"] ={"opcode" : 0x29, "format" : 6}
 instList["cmp"]={"opcode" : 0x2e, "format" : 4}
