@@ -377,10 +377,10 @@ def printInstFormat5(k, n, inst, e, lt, vt, ut, ot):
 	if inst["opcode"]==0x29: #LOOP
 		reg=getRegisterNameSRC((inst['bool']&0xF)+0x80)
 		start=getInputSymbolFromString(reg+".y", vt, ut, 0)
-		end=getInputSymbolFromString(reg+".x", vt, ut, 0)
+		end=start+"+"+getInputSymbolFromString(reg+".x", vt, ut, 0)
 		stride=getInputSymbolFromString(reg+".z", vt, ut, 0)
 		outputStringList(k, [n,
-						"(lcnt = "+start+"; lcnt < "+end+"; lcnt += "+stride+")",
+						"(lcnt = "+start+"; lcnt <= "+end+"; lcnt += "+stride+")",
 						" (adr "+getLabelSymbol(inst["addr"], lt)+", "+str(inst["ret"])+ " words, "+str(inst['bool']&0xF)+")"],
 						[8, 16, 16])
 	elif inst["opcode"]==0x27: #IFU
@@ -622,10 +622,12 @@ outputTypes={0x0 : "result.position",
 			0x1 : "result.normalquat", #maybe
 			0x2 : "result.color",
 			0x3 : "result.texcoord0",
+			# 0x4 : "?", #often used as component z (or w) for an output otherwise assigned to texcoord0
 			0x5 : "result.texcoord1",
 			0x6 : "result.texcoord2",
+			# 0x7 : "?", #never seen used
 			0x8 : "result.view", #"result.view" seems to be pre-projmatrix vertex coordinates
-			0x9 : "result.normal", #maybe
+			0x9 : "result.normal", #maybe (actually almost definitely not)
 			}
 
 def parseOutputTable(data, sym):

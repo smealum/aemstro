@@ -341,7 +341,7 @@ def assembleFormat6(d):
 
 def parseFormat7(dvle, s):
 	operandFmt1="[^\s,]*"
-	operandFmt3="i[0-3]+"
+	operandFmt3="i[0-9]+"
 	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt3+")")
 	r=p.match(s)
 	print(r.group(1))
@@ -457,7 +457,7 @@ def parseUniform(dvlp, dvle, s):
 		s[k]=s[k].replace(" ", "")
 	type=s[0][0]
 	if type!=s[1][0]:
-		print("inconsisten uniform register assignment !")
+		print("inconsistent uniform register assignment !")
 		return
 	if type=="c":
 		offset=0x10
