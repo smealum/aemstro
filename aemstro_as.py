@@ -1,6 +1,7 @@
 import sys
 import os
 import re
+import copy
 import struct
 
 #TODO : add parsing checks, handle errors more gracefully
@@ -16,6 +17,11 @@ def toFloat24(f):
 	else:
 		tmp2=s<<23
 	return tmp2
+
+vshMain=None
+vshEndmain=None
+gshMain=None
+gshEndmain=None
 
 class DVLE(object):
 	def __init__(self, type):
@@ -61,10 +67,6 @@ class DVLE(object):
 
 	#(code offset, symbol offset)
 	def addLabel(self, label):
-		if label[1]=="main":
-			self.setMain(label[0])
-		elif label[1]=="endmain":
-			self.setEndmain(label[0])
 		self._label.append((label[0],self.addSymbol(label[1])))
 		self._labelmap[label[1]]=label[0]
 
@@ -344,8 +346,6 @@ def parseFormat7(dvle, s):
 	operandFmt3="i[0-9]+"
 	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt3+")")
 	r=p.match(s)
-	print(r.group(1))
-	print(dvle.getLabelAddress(r.group(1)))
 	if r:
 		return {"addr" : dvle.getLabelAddress(r.group(1))-1,
 			"ret" : 0,
@@ -354,7 +354,6 @@ def parseFormat7(dvle, s):
 		raise Exception("encountered error while parsing instruction")
 
 def assembleFormat7(d):
-	print(d)
 	return (d["opcode"]<<26)|((d["int"]&0xF)<<22)|((d["addr"]&0xFFF)<<10)|(d["ret"]&0x3FF)
 
 def parseFormat8(dvle, s):
@@ -362,8 +361,6 @@ def parseFormat8(dvle, s):
 	operandFmt3="b[0-9]+"
 	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt1+"),\s*("+operandFmt3+")")
 	r=p.match(s)
-	print(r.group(1))
-	print(dvle.getLabelAddress(r.group(1)))
 	if r:
 		return {"addr" : dvle.getLabelAddress(r.group(2)),
 			"ret" : dvle.getLabelAddress(r.group(1))-dvle.getLabelAddress(r.group(2)),
@@ -372,11 +369,25 @@ def parseFormat8(dvle, s):
 		raise Exception("encountered error while parsing instruction")
 
 def assembleFormat8(d):
-	print(d)
 	return (d["opcode"]<<26)|((d["bool"]&0xF)<<22)|((d["addr"]&0xFFF)<<10)|(d["ret"]&0x3FF)
 
+def parseFormat9(dvle, s):
+	operandFmt1="true|false"
+	operandFmt3="vtx[0-9]+"
+	p=re.compile("^\s*("+operandFmt3+"),\s*("+operandFmt1+"),\s*("+operandFmt1+")")
+	r=p.match(s)
+	if r:
+		return {"unk" : r.group(3)=="true",
+			"prim" : r.group(2)=="true",
+			"vtx" : int(r.group(1).strip()[3:],0)}
+	else:
+		raise Exception("encountered error while parsing instruction")
+
+def assembleFormat9(d):
+	return (d["opcode"]<<26)|((d["vtx"]&0x3)<<24)|((d["unk"]&0x1)<<22)|((d["prim"]&0x1)<<23)
+
 instList={}
-fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5), (parseFormat1, assembleFormat6), (parseFormat7, assembleFormat7), (parseFormat8, assembleFormat8)]
+fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5), (parseFormat1, assembleFormat6), (parseFormat7, assembleFormat7), (parseFormat8, assembleFormat8), (parseFormat9, assembleFormat9)]
 
 instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
@@ -397,12 +408,14 @@ instList["dphi"]={"opcode" : 0x18, "format" : 5}
 instList["op19"]={"opcode" : 0x19, "format" : 5}
 instList["sgei"]={"opcode" : 0x1a, "format" : 5}
 instList["slti"]={"opcode" : 0x1b, "format" : 5}
+instList["end"]={"opcode" : 0x21, "format" : 2}
+instList["flush"]={"opcode" : 0x22, "format" : 2}
 instList["ifu"] ={"opcode" : 0x27, "format" : 7}
 instList["ifc"] ={"opcode" : 0x28, "format" : 1}
 instList["loop"] ={"opcode" : 0x29, "format" : 6}
+instList["emit"]={"opcode" : 0x2a, "format" : 2}
+instList["setemit"]={"opcode" : 0x2b, "format" : 8}
 instList["cmp"]={"opcode" : 0x2e, "format" : 4}
-instList["end"]={"opcode" : 0x21, "format" : 2}
-instList["flush"]={"opcode" : 0x22, "format" : 2}
 
 def parseConst(dvlp, dvle, s):
 	s=s.split(",")
@@ -467,12 +480,28 @@ def parseUniform(dvlp, dvle, s):
 		offset=0x78
 	dvle.addInput((int(s[0][1:],0)+offset,int(s[1][1:],0)+offset,s[2]))
 
+def parseVsh(dvlp, dvle, s):
+	global vshMain, vshEndmain
+	s=s.split(",")
+	for k in range(len(s)):
+		s[k]=s[k].replace(" ", "")
+	vshMain, vshEndmain = s[0], s[1]
+
+def parseGsh(dvlp, dvle, s):
+	global gshMain, gshEndmain
+	s=s.split(",")
+	for k in range(len(s)):
+		s[k]=s[k].replace(" ", "")
+	gshMain, gshEndmain = s[0], s[1]
+
 dirList={}
 
 dirList["const"]=(parseConst)
 dirList["out"]=(parseOut)
 dirList["opdesc"]=(parseOpdesc)
 dirList["uniform"]=(parseUniform)
+dirList["vsh"]=(parseVsh)
+dirList["gsh"]=(parseGsh)
 
 def parseInstruction(dvle, s):
 	s=s.lower()
@@ -532,16 +561,25 @@ if len(sys.argv)<3:
 	print("    aemstro_as.py  <input.vsh>  <output.shbin>")
 else:
 	dvlb=DVLB()
-	dvle=DVLE(0x0)
+	vsh_dvle=DVLE(0x0)
 
 	with open(sys.argv[1], "r") as f:
 		for line in f:
-			parseLine(dvlb.getDVLP(), dvle, line, False)
+			parseLine(dvlb.getDVLP(), vsh_dvle, line, False)
 	dvlb.getDVLP().clearCode()
 	with open(sys.argv[1], "r") as f:
 		for line in f:
-			parseLine(dvlb.getDVLP(), dvle, line, True)
+			parseLine(dvlb.getDVLP(), vsh_dvle, line, True)
 
-	dvlb.addDVLE(dvle)
+	vsh_dvle.setMain(vsh_dvle.getLabelAddress(vshMain))
+	vsh_dvle.setEndmain(vsh_dvle.getLabelAddress(vshEndmain))
+	dvlb.addDVLE(vsh_dvle)
+
+	if gshMain!=None and gshEndmain!=None:
+		gsh_dvle=copy.deepcopy(vsh_dvle)
+		gsh_dvle._type=0x1
+		gsh_dvle.setMain(gsh_dvle.getLabelAddress(gshMain))
+		gsh_dvle.setEndmain(gsh_dvle.getLabelAddress(gshEndmain))
+		dvlb.addDVLE(gsh_dvle)
 
 	open(sys.argv[2],"wb").write(dvlb.toBinary())
