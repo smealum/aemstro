@@ -386,8 +386,19 @@ def parseFormat9(dvle, s):
 def assembleFormat9(d):
 	return (d["opcode"]<<26)|((d["vtx"]&0x3)<<24)|((d["unk"]&0x1)<<22)|((d["prim"]&0x1)<<23)
 
+def parseFormat10(dvle, s):
+	operandFmt1="[^\s,]*"
+	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt1+")")
+	r=p.match(s)
+	if r:
+		return {"addr" : dvle.getLabelAddress(r.group(1)),
+			"ret" : dvle.getLabelAddress(r.group(2))-dvle.getLabelAddress(r.group(1)),
+			"flags" : 0x0}
+	else:
+		raise Exception("encountered error while parsing instruction")
+
 instList={}
-fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5), (parseFormat1, assembleFormat6), (parseFormat7, assembleFormat7), (parseFormat8, assembleFormat8), (parseFormat9, assembleFormat9)]
+fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5), (parseFormat1, assembleFormat6), (parseFormat7, assembleFormat7), (parseFormat8, assembleFormat8), (parseFormat9, assembleFormat9), (parseFormat10, assembleFormat2)]
 
 instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
@@ -403,13 +414,16 @@ instList["slt"]={"opcode" : 0x0a, "format" : 0}
 instList["flr"]={"opcode" : 0x0B, "format" : 3}
 instList["max"]={"opcode" : 0x0C, "format" : 0}
 instList["min"]={"opcode" : 0x0D, "format" : 0}
+instList["rcp"]={"opcode" : 0x0E, "format" : 3}
+instList["rsq"]={"opcode" : 0x0F, "format" : 3}
 instList["mov"]={"opcode" : 0x13, "format" : 3}
 instList["dphi"]={"opcode" : 0x18, "format" : 5}
 instList["op19"]={"opcode" : 0x19, "format" : 5}
 instList["sgei"]={"opcode" : 0x1a, "format" : 5}
 instList["slti"]={"opcode" : 0x1b, "format" : 5}
-instList["end"]={"opcode" : 0x21, "format" : 2}
+instList["nop"]={"opcode" : 0x21, "format" : 2}
 instList["flush"]={"opcode" : 0x22, "format" : 2}
+instList["call"] ={"opcode" : 0x24, "format" : 9}
 instList["ifu"] ={"opcode" : 0x27, "format" : 7}
 instList["ifc"] ={"opcode" : 0x28, "format" : 1}
 instList["loop"] ={"opcode" : 0x29, "format" : 6}
@@ -457,12 +471,16 @@ def parseOpdesc(dvlp, dvle, s):
 	for k in range(4):
 		if s[0][k]!="_":
 			mask|=1<<(3-k)
-	swiz=[0,0]
+	swiz=[0,0,0]
+	neg=[0,0,0]
 	for i in range(2):
 		l=s[1+i]
+		if l[0]=='-':
+			neg[i]=1
+			l=l[1:]
 		for k in range(4):
 			swiz[i]=((swiz[i]<<2)|swizVal[l[k]])
-	dvlp.addOpdesc(((1<<31)|(swiz[1]<<14)|(swiz[0]<<5)|(mask),0x0000000F))
+	dvlp.addOpdesc(((1<<31)|(swiz[2]<<23)|(neg[2]<<22)|(swiz[1]<<14)|(neg[1]<<13)|(swiz[0]<<5)|(neg[0]<<4)|(mask),0x0000000F))
 
 def parseUniform(dvlp, dvle, s):
 	s=s.split(",")

@@ -666,6 +666,7 @@ def parseDVLE(data,dvlp, k):
 
 	resetIndentLevel()
 
+	iprint("unkval "+hex(getWord(data, 0x4, 2)))
 	iprint("vertex shader" if shaderType==0x0 else "geometry shader")
 	iprint("main : "+hex(mainStart)+"-"+hex(mainEnd))
 	print("")
