@@ -503,9 +503,9 @@ def parseCode(data, e, lt, vt, ut, ot):
 			fmtList[fmt][1](k, instList[opcode]["name"], inst, e, lt, vt, ut, ot)
 		elif opcode==0x21:
 			# outputStringList(k,["END"],[8])
-			outputStringList(k,["RET"],[8])
+			outputStringList(k,["NOP"],[8])
 		elif opcode==0x22:
-			outputStringList(k,["FLUSH"],[8])
+			outputStringList(k,["END"],[8])
 		elif opcode==0x2A:
 			inst=parseInstFormat1(k, v)
 			outputStringList(k,["EMITVERTEX"],[10])
