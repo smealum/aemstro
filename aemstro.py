@@ -629,9 +629,8 @@ outputTypes={0x0 : "result.position",
 			0x4 : "result.texcoord0w",
 			0x5 : "result.texcoord1",
 			0x6 : "result.texcoord2",
-			# 0x7 : "?", #never seen used
+			# 0x7 : "?", #sets outreg info to 0x1f1f1f1f...
 			0x8 : "result.view", #"result.view" seems to be pre-projmatrix vertex coordinates
-			0x9 : "result.normal", #maybe (actually almost definitely not)
 			}
 
 def parseOutputTable(data, sym):
