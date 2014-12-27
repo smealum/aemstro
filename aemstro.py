@@ -626,7 +626,7 @@ outputTypes={0x0 : "result.position",
 			0x1 : "result.normalquat", #maybe
 			0x2 : "result.color",
 			0x3 : "result.texcoord0",
-			# 0x4 : "?", #often used as component z (or w) for an output otherwise assigned to texcoord0
+			0x4 : "result.texcoord0w",
 			0x5 : "result.texcoord1",
 			0x6 : "result.texcoord2",
 			# 0x7 : "?", #never seen used

@@ -445,8 +445,10 @@ def parseConst(dvlp, dvle, s):
 		dvle.addConstantF((int(s[0][1:],0), float(s[1]), float(s[2]), float(s[3]), float(s[4])))
 
 outputTypes={"result.position" : 0x0,
+			"result.normalquat" : 0x1,
 			"result.color" : 0x2,
 			"result.texcoord0" : 0x3,
+			"result.texcoord0w" : 0x4,
 			"result.texcoord1" : 0x5,
 			"result.texcoord2" : 0x6,
 			"result.view" : 0x8}
@@ -455,10 +457,12 @@ def parseOut(dvlp, dvle, s):
 	s=s.split(",")
 	s[0]=s[0].replace(" ", "")
 	s[1]=s[1].replace(" ", "")
+	s[2]=s[2].replace(" ", "")
 	reg=int(s[0][1:])
 	if s[1] in outputTypes:
 		type=outputTypes[s[1]]
-		dvle.addOutput((type|(reg<<16), 0x00000000))
+		mask=int(s[2], 0)
+		dvle.addOutput((type|(reg<<16), mask))
 
 swizVal={"w":0x3,"z":0x2,"y":0x1,"x":0x0}
 
