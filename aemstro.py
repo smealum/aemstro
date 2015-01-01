@@ -224,6 +224,16 @@ def parseInstFormat9(k, v, lt={}):
 			"idx_2"    : 0x0,
 			"extid"  : (v)&0x1F}
 
+def parseInstFormat12(k, v, lt={}):
+	return {"opcode" : v>>26,
+			"dst"   : (v>>24)&0x1F,
+			"src1"   : (v>>17)&0x7F,
+			"src2"   : (v>>12)&0x1F,
+			"src3"    : (v>>5)&0x7F,
+			"idx_1"    : 0x0,
+			"idx_2"    : 0x0,
+			"extid"  : (v)&0x1F}
+
 def parseInstFormat2(k, v, lt={}):
 	ret={"opcode" : v>>26,
 			"addr"   : (v>>8)&0x3FFC,
@@ -445,7 +455,7 @@ def printInstFormat11(k, n, inst, e, lt, vt, ut, ot):
 							[8, 16, None, 16, None, 16, None])
 
 instList={}
-fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5), (parseInstFormat6, printInstFormat6), (parseInstFormat1, printInstFormat7), (parseInstFormat8, printInstFormat1), (parseInstFormat9, printInstFormat9), (parseInstFormat10, printInstFormat10), (parseInstFormat2, printInstFormat11)]
+fmtList=[(parseInstFormat1, printInstFormat1), (parseInstFormat2, printInstFormat2), (parseInstFormat2, printInstFormat2), (parseInstFormat1, printInstFormat4), (parseInstFormat5, printInstFormat5), (parseInstFormat6, printInstFormat6), (parseInstFormat1, printInstFormat7), (parseInstFormat8, printInstFormat1), (parseInstFormat9, printInstFormat9), (parseInstFormat10, printInstFormat10), (parseInstFormat2, printInstFormat11), (parseInstFormat12, printInstFormat9)]
 
 instList[0x00]={"name" : "ADD", "format" : 0} #really SUB ?
 instList[0x01]={"name" : "DP3", "format" : 0}
@@ -479,7 +489,7 @@ instList[0x2d]={"name" : "JMPU", "format" : 4} #conditional jump (uniform bool)
 for i in range(0x2):
 	instList[0x2e+i]={"name" : "CMP", "format" : 9}
 for i in range(0x8):
-	instList[0x30+i]={"name" : "LRP", "format" : 8}
+	instList[0x30+i]={"name" : "MADI", "format" : 11}
 for i in range(0x8):
 	instList[0x38+i]={"name" : "MAD", "format" : 8}
 

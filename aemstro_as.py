@@ -236,16 +236,27 @@ def getRegisterFromNameDst(s):
 		print("error : "+s+" is not a valid register name")
 
 def getRegisterFromNameSrc1(s):
+	index=0
+	if "[" in s:
+		i=s.index("[")
+		index=s[i+1:-1]
+		s=s[:i]
+		if index=="a0.x":
+			index=1
+		elif index=="a0.y":
+			index=2
+		elif index=="aL":
+			index=3
 	if s[0]=="o": # output
 		print("error : "+s+" cannot be accessed from src1")
 	elif s[0]=="v": # attribute
-		return int(s[1:])
+		return (int(s[1:]), index)
 	elif s[0]=="r": # temporary register
-		return int(s[1:])+0x10
+		return (int(s[1:])+0x10, index)
 	elif s[0]=="c": # uniform
-		return int(s[1:])+0x20
+		return (int(s[1:])+0x20, index)
 	elif s[0]=="d": # direct hex; unambiguous
-		return int("0x"+s[1:],0)
+		return (int("0x"+s[1:],0), index)
 	else:
 		print("error : "+s+" is not a valid register name")
 
@@ -263,8 +274,46 @@ def getRegisterFromNameSrc2(s):
 	else:
 		print("error : "+s+" is not a valid register name")
 
+def assembleFormat11(d):
+	return (d["opcode"]<<26)|((d["dst"]&0x1F)<<24)|((d["src1"]&0x7F)<<17)|((d["src2"]&0x7F)<<10)|((d["src3"]&0x1F)<<5)|(d["extid"]&0x1F)
+
+def parseFormat11(dvle, s):
+	operandFmt="[^\s,]*"
+	descFmt="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
+	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+"),\s*("+operandFmt+"),\s*("+operandFmt+")\s*\(("+descFmt+")\)")
+	r=p.match(s)
+	if r:
+		src1 = getRegisterFromNameSrc1(r.group(2))
+		src2 = getRegisterFromNameSrc1(r.group(3))
+		return {"dst" : getRegisterFromNameDst(r.group(1)),
+			"src1" : src1[0],
+			"src2" : src2[0],
+			"src3" : getRegisterFromNameSrc2(r.group(4)),
+			"extid" : int(r.group(5),0)}
+	else:
+		raise Exception("encountered error while parsing instruction")
+
+def assembleFormat12(d):
+	return (d["opcode"]<<26)|((d["dst"]&0x1F)<<24)|((d["src1"]&0x7F)<<17)|((d["src2"]&0x1F)<<12)|((d["src3"]&0x7F)<<5)|(d["extid"]&0x1F)
+
+def parseFormat12(dvle, s):
+	operandFmt="[^\s,]*"
+	descFmt="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
+	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+"),\s*("+operandFmt+"),\s*("+operandFmt+")\s*\(("+descFmt+")\)")
+	r=p.match(s)
+	if r:
+		src1 = getRegisterFromNameSrc1(r.group(2))
+		src3 = getRegisterFromNameSrc1(r.group(4))
+		return {"dst" : getRegisterFromNameDst(r.group(1)),
+			"src1" : src1[0],
+			"src2" : getRegisterFromNameSrc2(r.group(3)),
+			"src3" : src3[0],
+			"extid" : int(r.group(5),0)}
+	else:
+		raise Exception("encountered error while parsing instruction")
+
 def assembleFormat1(d):
-	return (d["opcode"]<<26)|((d["dst"]&0x1F)<<21)|((d["src1"]&0x7F)<<12)|((d["src2"]&0x1F)<<7)|(d["extid"]&0x7F)
+	return (d["opcode"]<<26)|((d["dst"]&0x1F)<<21)|((d["idx"]&0x3)<<19)|((d["src1"]&0x7F)<<12)|((d["src2"]&0x1F)<<7)|(d["extid"]&0x7F)
 
 def parseFormat1(dvle, s):
 	operandFmt="[^\s,]*"
@@ -272,8 +321,10 @@ def parseFormat1(dvle, s):
 	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+"),\s*("+operandFmt+")\s*\(("+descFmt+")\)")
 	r=p.match(s)
 	if r:
+		src1 = getRegisterFromNameSrc1(r.group(2))
 		return {"dst" : getRegisterFromNameDst(r.group(1)),
-			"src1" : getRegisterFromNameSrc1(r.group(2)),
+			"src1" : src1[0],
+			"idx" : src1[1],
 			"src2" : getRegisterFromNameSrc2(r.group(3)),
 			"extid" : int(r.group(4),0)}
 	else:
@@ -306,7 +357,7 @@ def parseFormat3(dvle, s):
 	return {}
 
 def assembleFormat4(d):
-	return (d["opcode"]<<26)|((d["dst"]&0x1F)<<21)|((d["src1"]&0x7F)<<12)|(d["extid"]&0x7F)
+	return (d["opcode"]<<26)|((d["dst"]&0x1F)<<21)|((d["idx"]&0x3)<<19)|((d["src1"]&0x7F)<<12)|(d["extid"]&0x7F)
 
 def parseFormat4(dvle, s):
 	operandFmt="[^\s,]*"
@@ -314,29 +365,35 @@ def parseFormat4(dvle, s):
 	p=re.compile("^\s*("+operandFmt+"),\s*("+operandFmt+")\s*\(("+descFmt+")\)")
 	r=p.match(s)
 	if r:
+		src1 = getRegisterFromNameSrc1(r.group(2))
 		return {"dst" : getRegisterFromNameDst(r.group(1)),
-			"src1" : getRegisterFromNameSrc1(r.group(2)),
+			"src1" : src1[0],
+			"idx" : src1[1],
 			"extid" : int(r.group(3),0)}
 	else:
-		raise Exception("encountered error while parsing instruction")
+		raise Exception("encountered error while parsing instruction "+s)
 
 def assembleFormat5(d):
 	return (d["opcode"]<<26)|((d["cmpx"]&0x7)<<24)|((d["cmpy"]&0x7)<<21)|((d["src1"]&0x7F)<<12)|((d["src2"]&0x1F)<<7)|(d["extid"]&0x7F)
 
+cmpOp = {"eq" : 0x0, "ne" : 0x1, "lt" : 0x2, "le" : 0x3, "gt" : 0x4, "ge" : 0x5}
+
 def parseFormat5(dvle, s):
 	operandFmt="[^\s,]*"
 	descFmt="(?:(?:0x)[0-9a-f]+)|[0-9a-f]+"
-	opFmt="[0-9]+"
+	opFmt="[a-z]+"
 	p=re.compile("^\s*("+operandFmt+"),\s*("+opFmt+"),\s*("+opFmt+"),\s*("+operandFmt+")\s*\(("+descFmt+")\)")
 	r=p.match(s)
 	if r:
-		return {"src1" : getRegisterFromNameSrc1(r.group(1)),
-			"cmpx" : int(r.group(2)),
-			"cmpy" : int(r.group(3)),
+		src1 = getRegisterFromNameSrc1(r.group(1))
+		return {"src1" : src1[0],
+			"idx" : src1[1],
+			"cmpx" : cmpOp[r.group(2)],
+			"cmpy" : cmpOp[r.group(3)],
 			"src2" : getRegisterFromNameSrc2(r.group(4)),
 			"extid" : int(r.group(5),0)}
 	else:
-		raise Exception("encountered error while parsing instruction")
+		raise Exception("encountered error while parsing instruction (5)")
 
 def assembleFormat6(d):
 	return (d["opcode"]<<26)|((d["dst"]&0x1F)<<21)|((d["src2"]&0x7F)<<7)|((d["src1"]&0x1F)<<14)|(d["extid"]&0x7F)
@@ -398,7 +455,7 @@ def parseFormat10(dvle, s):
 		raise Exception("encountered error while parsing instruction")
 
 instList={}
-fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5), (parseFormat1, assembleFormat6), (parseFormat7, assembleFormat7), (parseFormat8, assembleFormat8), (parseFormat9, assembleFormat9), (parseFormat10, assembleFormat2)]
+fmtList=[(parseFormat1, assembleFormat1), (parseFormat2, assembleFormat2), (parseFormat3, assembleFormat3), (parseFormat4, assembleFormat4), (parseFormat5, assembleFormat5), (parseFormat1, assembleFormat6), (parseFormat7, assembleFormat7), (parseFormat8, assembleFormat8), (parseFormat9, assembleFormat9), (parseFormat10, assembleFormat2), (parseFormat11, assembleFormat11), (parseFormat12, assembleFormat12)]
 
 instList["add"]={"opcode" : 0x00, "format" : 0}
 instList["dp3"]={"opcode" : 0x01, "format" : 0}
@@ -416,13 +473,14 @@ instList["max"]={"opcode" : 0x0C, "format" : 0}
 instList["min"]={"opcode" : 0x0D, "format" : 0}
 instList["rcp"]={"opcode" : 0x0E, "format" : 3}
 instList["rsq"]={"opcode" : 0x0F, "format" : 3}
+instList["mova"]={"opcode" : 0x12, "format" : 3}
 instList["mov"]={"opcode" : 0x13, "format" : 3}
 instList["dphi"]={"opcode" : 0x18, "format" : 5}
 instList["op19"]={"opcode" : 0x19, "format" : 5}
 instList["sgei"]={"opcode" : 0x1a, "format" : 5}
 instList["slti"]={"opcode" : 0x1b, "format" : 5}
 instList["nop"]={"opcode" : 0x21, "format" : 2}
-instList["flush"]={"opcode" : 0x22, "format" : 2}
+instList["end"]={"opcode" : 0x22, "format" : 2}
 instList["call"] ={"opcode" : 0x24, "format" : 9}
 instList["ifu"] ={"opcode" : 0x27, "format" : 7}
 instList["ifc"] ={"opcode" : 0x28, "format" : 1}
@@ -430,6 +488,8 @@ instList["loop"] ={"opcode" : 0x29, "format" : 6}
 instList["emit"]={"opcode" : 0x2a, "format" : 2}
 instList["setemit"]={"opcode" : 0x2b, "format" : 8}
 instList["cmp"]={"opcode" : 0x2e, "format" : 4}
+instList["madi"]={"opcode" : 0x30, "format" : 11}
+instList["mad"]={"opcode" : 0x38, "format" : 10}
 
 def parseConst(dvlp, dvle, s):
 	s=s.split(",")
@@ -477,7 +537,7 @@ def parseOpdesc(dvlp, dvle, s):
 			mask|=1<<(3-k)
 	swiz=[0,0,0]
 	neg=[0,0,0]
-	for i in range(2):
+	for i in range(len(s)-1):
 		l=s[1+i]
 		if l[0]=='-':
 			neg[i]=1
