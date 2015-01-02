@@ -336,17 +336,27 @@ def assembleFormat2(d):
 
 def parseFormat2(dvle, s):
 	operandFmt1="[^\s,]*"
-	operandFmt3="0b[0-1]+"
-	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt1+"),\s*("+operandFmt3+")")
+	# operandFmt3="0b[0-1]+"
+	operandFmt3="([!]?)cmp.([xy])"
+	operandFmt3=operandFmt3+"\s*(?:(&&|\|\|)\s*"+operandFmt3+")?"
+	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt1+"),\s*"+operandFmt3+"\s*$")
 	r=p.match(s)
-	print(r.group(1))
-	print(dvle.getLabelAddress(r.group(1)))
 	if r:
-		return {"addr" : dvle.getLabelAddress(r.group(2)),
-			"ret" : dvle.getLabelAddress(r.group(1))-dvle.getLabelAddress(r.group(2)),
-			"flags" : int(r.group(3),0)}
+		neg = [0 if r.group(3)=="!" else 1, 0 if r.group(6)=="!" else 1]
+		comp = [3 if r.group(4)=="x" else 2, None if r.group(7)==None else (3 if r.group(7)=="x" else 2)]
+		op = r.group(5)
+		if comp[0]!=comp[1]:
+			flags=0
+			flags|=neg[0]<<comp[0]
+			flags|=neg[1]<<comp[1] if comp[1]!=None else 0
+			flags|=1 if op=="&&" else (0 if op=="||" else (comp[0]))
+			return {"addr" : dvle.getLabelAddress(r.group(2)),
+				"ret" : dvle.getLabelAddress(r.group(1))-dvle.getLabelAddress(r.group(2)),
+				"flags" : flags}
+		else:
+			raise Exception("invalid or redundant condition "+s)
 	else:
-		raise Exception("encountered error while parsing instruction")
+		raise Exception("encountered error while parsing instruction "+s)
 
 def assembleFormat3(d):
 	return (d["opcode"]<<26)
