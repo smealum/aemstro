@@ -426,10 +426,10 @@ def printInstFormat11(k, n, inst, e, lt, vt, ut, ot):
 			cond=("!" if inst["flags"]&0x8 == 0 else "")+"cmp.x"+" || "+("!" if inst["flags"]&0x4 == 0 else "")+"cmp.y"
 		elif inst["flags"]&0x3==0x1: #AND
 			cond=("!" if inst["flags"]&0x8 == 0 else "")+"cmp.x"+" && "+("!" if inst["flags"]&0x4 == 0 else "")+"cmp.y"
-		elif inst["flags"]&0x3==0x2: #Y
-						cond=("!" if inst["flags"]&0x4 == 0 else "")+"cmp.y"
-		elif inst["flags"]&0x3==0x3: #X
+		elif inst["flags"]&0x3==0x2: #X
 						cond=("!" if inst["flags"]&0x8 == 0 else "")+"cmp.x"
+		elif inst["flags"]&0x3==0x3: #Y
+						cond=("!" if inst["flags"]&0x4 == 0 else "")+"cmp.y"
 
 		if inst["opcode"]==0x23: #BREAK
 			outputStringList(k, [n,

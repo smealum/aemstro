@@ -211,6 +211,7 @@ class DVLB(object):
 		retb=bytearray()
 		retb+=self._dvlp.toBinary()
 		for k in self._dvle:
+			retb+=bytearray([0x00]*(0 if len(retb)%4==0 else 4-(len(retb)%4)))
 			ret.append(off+len(retb))
 			retb+=k.toBinary()
 
@@ -336,20 +337,24 @@ def assembleFormat2(d):
 
 def parseFormat2(dvle, s):
 	operandFmt1="[^\s,]*"
-	# operandFmt3="0b[0-1]+"
+	# operandFmt3="0b[01]+"
 	operandFmt3="([!]?)cmp.([xy])"
 	operandFmt3=operandFmt3+"\s*(?:(&&|\|\|)\s*"+operandFmt3+")?"
 	p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt1+"),\s*"+operandFmt3+"\s*$")
+	# p=re.compile("^\s*("+operandFmt1+"),\s*("+operandFmt1+"),\s*("+operandFmt3+")\s*")
 	r=p.match(s)
 	if r:
 		neg = [0 if r.group(3)=="!" else 1, 0 if r.group(6)=="!" else 1]
-		comp = [3 if r.group(4)=="x" else 2, None if r.group(7)==None else (3 if r.group(7)=="x" else 2)]
+		comp = [2 if r.group(4)=="y" else 3, None if r.group(7)==None else (2 if r.group(7)=="y" else 3)]
 		op = r.group(5)
 		if comp[0]!=comp[1]:
 			flags=0
 			flags|=neg[0]<<comp[0]
 			flags|=neg[1]<<comp[1] if comp[1]!=None else 0
-			flags|=1 if op=="&&" else (0 if op=="||" else (comp[0]))
+			flags|=1 if op=="&&" else (0 if op=="||" else (3 if comp[0]==2 else 2))
+			# print(s)
+			# flags=int(r.group(3),0)
+			print(bin(flags))
 			return {"addr" : dvle.getLabelAddress(r.group(2)),
 				"ret" : dvle.getLabelAddress(r.group(1))-dvle.getLabelAddress(r.group(2)),
 				"flags" : flags}
